@@ -28,12 +28,13 @@
   .login button {
     border: none;
     border-radius: 5px;
-    padding: 10px 20px;
+    padding: 10px 10px;
     background-color: #610094;
     color: white;
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
+    transition: transform 0.3s ease;
   }
   
   .login button:hover {
