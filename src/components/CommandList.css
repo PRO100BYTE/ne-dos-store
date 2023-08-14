@@ -1,0 +1,28 @@
+.CommandList {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-gap: 20px;
+    padding: 20px;
+  }
+  
+  .command {
+    border: 2px solid white;
+    border-radius: 10px;
+    padding: 10px;
+  }
+  
+  .command h3 {
+    font-size: 20px;
+    font-weight: bold;
+  }
+  
+  .command p {
+    font-size: 16px;
+  }
+  
+  .command code {
+    font-size: 14px;
+    font-family: monospace;
+    color: #00ff00;
+  }
+  

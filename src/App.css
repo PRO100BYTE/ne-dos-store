@@ -1,0 +1,9 @@
+.App {
+  font-family: Montserrat, sans-serif;
+  color: white;
+  background-color: black;
+}
+
+.App * {
+  box-sizing: border-box;
+}
