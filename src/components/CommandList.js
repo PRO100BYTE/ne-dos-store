@@ -6,63 +6,51 @@ function CommandList() {
   const commands = [
     {
         name: 'calc',
-        description: 'Калькулятор, позволяющий выполнять арифметические операции',
-        install: 'https://store.ne-dos.ru/calc'
+        description: 'Калькулятор, позволяющий выполнять арифметические операции'
     },
     {
         name: 'clock',
-        description: 'Часы, показывающие текущее время и дату',
-        install: 'https://store.ne-dos.ru/clock'
+        description: 'Часы, показывающие текущее время и дату'
     },
     {
         name: 'snake',
-        description: 'Классическая игра Змейка, в которой нужно собирать еду и не врезаться в стены или хвост',
-        install: 'https://store.ne-dos.ru/snake'
+        description: 'Классическая игра Змейка, в которой нужно собирать еду и не врезаться в стены или хвост'
     },
     {
         name: 'chat',
-        description: 'Чат, позволяющий общаться с другими пользователями NE-DOS',
-        install: 'https://store.ne-dos.ru/chat'
+        description: 'Чат, позволяющий общаться с другими пользователями NE-DOS'
     },
     {
         name: 'paint',
-        description: 'Графический редактор, позволяющий рисовать и сохранять изображения',
-        install: 'https://store.ne-dos.ru/paint'
+        description: 'Графический редактор, позволяющий рисовать и сохранять изображения'
     },
     {
         name: 'music',
-        description: 'Музыкальный плеер, позволяющий воспроизводить и загружать музыкальные файлы',
-        install: 'https://store.ne-dos.ru/music'
+        description: 'Музыкальный плеер, позволяющий воспроизводить и загружать музыкальные файлы'
     },
     {
         name: 'browser',
-        description: 'Веб-браузер, позволяющий просматривать веб-страницы в интернете',
-        install: 'https://store.ne-dos.ru/browser'
+        description: 'Веб-браузер, позволяющий просматривать веб-страницы в интернете'
     },
     {
         name: 'todo',
-        description: 'Список дел, позволяющий добавлять, удалять и отмечать задачи',
-        install: 'https://store.ne-dos.ru/todo'
+        description: 'Список дел, позволяющий добавлять, удалять и отмечать задачи'
     },
     {
         name: 'weather',
-        description: 'Погода, показывающая текущую температуру, влажность и прогноз на ближайшие дни',
-        install: 'https://store.ne-dos.ru/weather'
+        description: 'Погода, показывающая текущую температуру, влажность и прогноз на ближайшие дни'
     },
     {
         name: 'quiz',
-        description: 'Викторина, в которой нужно отвечать на вопросы по разным темам',
-        install: 'https://store.ne-dos.ru/quiz'
+        description: 'Викторина, в которой нужно отвечать на вопросы по разным темам'
     },
     {
         name: 'www',
-        description: 'Открывает ссылку в новой вкладке',
-        install: 'https://store.ne-dos.ru/www'
+        description: 'Открывает ссылку в новой вкладке'
     },
     {
         name: 'github',
-        description: 'Открывает репозиторий проекта на GitHub',
-        install: 'https://store.ne-dos.ru/github'
+        description: 'Открывает репозиторий проекта на GitHub'
     }
     
   ];
@@ -73,7 +61,7 @@ function CommandList() {
         <div className="command" key={command.name}>
           <h3>{command.name}</h3>
           <p>{command.description}</p> 
-          <code>registercommand {command.install}</code>
+          <code>cmd install {command.name}</code>
         </div>
       ))}
     </div>
