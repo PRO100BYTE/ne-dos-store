@@ -2,13 +2,13 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); /* Изменить эту строку */
   grid-gap: 20px;
-  padding: 20px;
+  padding: 30px;
 }
 
 .command {
   border: 2px solid white;
   border-radius: 10px;
-  padding: 10px;
+  padding: 20px;
 }
 
 .command h3 {
@@ -28,6 +28,7 @@
 
 @media (max-width: 600px) { /* Добавить этот медиа-запрос */
   .CommandList {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Изменить значение minmax */
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Изменить значение minmax */
   }
 }
+

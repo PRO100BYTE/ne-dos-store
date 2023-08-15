@@ -51,6 +51,18 @@ function CommandList() {
     {
         name: 'github',
         description: 'Открывает репозиторий проекта на GitHub'
+    },
+    {
+        name: 'command',
+        description: 'Здесь должно быть описание команды'
+    },
+    {
+        name: 'confetti',
+        description: 'Здесь должно быть описание команды'
+    },
+    {
+        name: 'reboot',
+        description: 'Здесь должно быть описание команды'
     }
     
   ];
