@@ -8,7 +8,7 @@
 
 ### С чего начать?
 1. Выполните клонирование репозитория: \
-   `git clone https://github.com/PRO100BYTE/ne-dos`
+   `git clone https://github.com/PRO100BYTE/ne-dos-store`
 2. Установите зависимости: \
    `npm install`
 3. Запустите сервер разработки: \
