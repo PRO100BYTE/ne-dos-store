@@ -19,5 +19,26 @@
     "origin": "community",
     "installerFingerprint": "::1",
     "createdAt": "2026-05-22T03:49:59.322Z"
+  },
+  {
+    "id": "9fce0c7b-99a6-4638-a930-4177fce10c06",
+    "commandSlug": "nc",
+    "origin": "core",
+    "installerFingerprint": "::1",
+    "createdAt": "2026-05-22T04:58:43.043Z"
+  },
+  {
+    "id": "e4e9d23a-f2a7-4a5a-ae5b-b544c3bba1b7",
+    "commandSlug": "etest",
+    "origin": "submitted",
+    "installerFingerprint": "::1",
+    "createdAt": "2026-05-22T08:09:52.115Z"
+  },
+  {
+    "id": "9d955212-d664-432e-b5ae-b7b288c5e5f9",
+    "commandSlug": "etest",
+    "origin": "submitted",
+    "installerFingerprint": "::1",
+    "createdAt": "2026-05-22T08:10:09.701Z"
   }
 ]

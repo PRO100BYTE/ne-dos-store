@@ -6,13 +6,13 @@
     "passwordHash": "9669c0b12ae14f13437f5946cfa19dbb517d6a2d2a503db01600309600bbc506",
     "roles": [
       "uploader",
-      "moderator",
-      "admin"
+      "ApplicationModerator",
+      "Administrator"
     ],
     "linkedSculkIds": [],
     "status": "active",
     "createdAt": "2026-05-22T02:53:40.500Z",
-    "updatedAt": "2026-05-22T02:53:40.502Z"
+    "updatedAt": "2026-05-22T08:25:11.353Z"
   },
   {
     "id": "18c3b6a3-d4b2-4112-856b-f4135e4d0396",
@@ -52,5 +52,122 @@
     "status": "active",
     "createdAt": "2026-05-22T03:17:17.866Z",
     "updatedAt": "2026-05-22T03:17:17.866Z"
+  },
+  {
+    "id": "0f5b5e36-1487-433b-aeec-fb4bb5c10b71",
+    "username": "ci-user-1779425702501",
+    "displayName": "CI Uploader",
+    "passwordHash": "770fb18697b6b64052ea8414cc81cdadcaabb6e06ae047d8490abc48372812c5",
+    "roles": [
+      "uploader"
+    ],
+    "linkedSculkIds": [],
+    "status": "active",
+    "createdAt": "2026-05-22T04:55:02.508Z",
+    "updatedAt": "2026-05-22T04:55:02.508Z"
+  },
+  {
+    "id": "9de2a021-ed50-4070-98d9-5dc1a7ca8170",
+    "username": "dbg1779426045371",
+    "displayName": "Dbg",
+    "passwordHash": "770fb18697b6b64052ea8414cc81cdadcaabb6e06ae047d8490abc48372812c5",
+    "roles": [
+      "uploader"
+    ],
+    "linkedSculkIds": [],
+    "status": "active",
+    "createdAt": "2026-05-22T05:00:45.434Z",
+    "updatedAt": "2026-05-22T05:00:45.434Z"
+  },
+  {
+    "id": "44058fbc-a140-438d-abd8-cbd0cb7bf3e4",
+    "username": "x1779426118778",
+    "displayName": "x1779426118778",
+    "passwordHash": "770fb18697b6b64052ea8414cc81cdadcaabb6e06ae047d8490abc48372812c5",
+    "roles": [
+      "uploader"
+    ],
+    "linkedSculkIds": [],
+    "status": "active",
+    "createdAt": "2026-05-22T05:01:58.842Z",
+    "updatedAt": "2026-05-22T05:01:58.842Z"
+  },
+  {
+    "id": "790f34dd-ae42-40d2-9ca5-86d8ef2d8183",
+    "username": "pp1779426235961",
+    "displayName": "pp1779426235961",
+    "passwordHash": "770fb18697b6b64052ea8414cc81cdadcaabb6e06ae047d8490abc48372812c5",
+    "roles": [
+      "uploader"
+    ],
+    "linkedSculkIds": [],
+    "status": "active",
+    "createdAt": "2026-05-22T05:03:56.025Z",
+    "updatedAt": "2026-05-22T05:03:56.025Z"
+  },
+  {
+    "id": "53c207df-29c3-40ca-9434-b0b483e5cf17",
+    "username": "pp1779426371876",
+    "displayName": "pp1779426371876",
+    "passwordHash": "770fb18697b6b64052ea8414cc81cdadcaabb6e06ae047d8490abc48372812c5",
+    "roles": [
+      "uploader"
+    ],
+    "linkedSculkIds": [],
+    "status": "active",
+    "createdAt": "2026-05-22T05:06:11.934Z",
+    "updatedAt": "2026-05-22T05:06:11.934Z"
+  },
+  {
+    "id": "e49c6682-fd17-46f5-825e-4fcd64d98c09",
+    "username": "pp1779426438091",
+    "displayName": "Modern User",
+    "passwordHash": "b6fb029fef504cf4eee469c76e7b9b0dc0115057c8bd267ad6304f8443dedf19",
+    "roles": [
+      "uploader"
+    ],
+    "linkedSculkIds": [],
+    "status": "active",
+    "createdAt": "2026-05-22T05:07:18.234Z",
+    "updatedAt": "2026-05-22T05:07:18.259Z"
+  },
+  {
+    "id": "567c9cbd-e29e-4d8b-b2f6-809b81869771",
+    "username": "ci-user-1779426448843",
+    "displayName": "CI Updated User",
+    "passwordHash": "b6fb029fef504cf4eee469c76e7b9b0dc0115057c8bd267ad6304f8443dedf19",
+    "roles": [
+      "uploader"
+    ],
+    "linkedSculkIds": [],
+    "status": "active",
+    "createdAt": "2026-05-22T05:07:28.849Z",
+    "updatedAt": "2026-05-22T05:07:28.862Z"
+  },
+  {
+    "id": "b54c2f9b-f07f-413a-903b-8d61ca970a24",
+    "username": "ci-user-1779426798152",
+    "displayName": "CI Updated User",
+    "passwordHash": "b6fb029fef504cf4eee469c76e7b9b0dc0115057c8bd267ad6304f8443dedf19",
+    "roles": [
+      "uploader"
+    ],
+    "linkedSculkIds": [],
+    "status": "active",
+    "createdAt": "2026-05-22T05:13:18.157Z",
+    "updatedAt": "2026-05-22T05:13:18.170Z"
+  },
+  {
+    "id": "6097d0a2-e9a9-4924-8123-6f801f292d1c",
+    "username": "ci-user-1779436731471",
+    "displayName": "CI Updated User",
+    "passwordHash": "b6fb029fef504cf4eee469c76e7b9b0dc0115057c8bd267ad6304f8443dedf19",
+    "roles": [
+      "uploader"
+    ],
+    "linkedSculkIds": [],
+    "status": "active",
+    "createdAt": "2026-05-22T07:58:51.493Z",
+    "updatedAt": "2026-05-22T07:58:51.504Z"
   }
 ]

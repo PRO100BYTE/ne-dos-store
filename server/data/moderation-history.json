@@ -12,5 +12,89 @@
     "submissionId": "c7be121d-fbb9-41f9-8a8e-e83b300b42f6",
     "slug": "ci-cmd-1779418489355",
     "note": "Approved in CI"
+  },
+  {
+    "id": "3da43832-8c2a-4d93-ad10-6943efab8b8d",
+    "createdAt": "2026-05-22T05:07:28.951Z",
+    "actor": "admin",
+    "actorRoles": [
+      "uploader",
+      "moderator",
+      "admin"
+    ],
+    "action": "approve",
+    "submissionId": "741196db-6f54-4c03-b0c2-4b650e4dac99",
+    "slug": "ci-cmd-1779426448929",
+    "note": "Approved in CI"
+  },
+  {
+    "id": "9850dc1a-0cf1-451f-b1a6-383619d6e22a",
+    "createdAt": "2026-05-22T05:13:18.211Z",
+    "actor": "admin",
+    "actorRoles": [
+      "uploader",
+      "moderator",
+      "admin"
+    ],
+    "action": "approve",
+    "submissionId": "71108068-3b02-4524-83bb-144d5e345552",
+    "slug": "ci-cmd-1779426798201",
+    "note": "Approved in CI"
+  },
+  {
+    "id": "90efce1e-8ede-4431-8f01-e049778dcd5a",
+    "createdAt": "2026-05-22T07:58:51.544Z",
+    "actor": "admin",
+    "actorRoles": [
+      "uploader",
+      "ApplicationModerator",
+      "Administrator"
+    ],
+    "action": "approve",
+    "submissionId": "d788c7ed-8b6f-407e-be55-5c68c0722dfb",
+    "slug": "ci-cmd-1779436731538",
+    "note": "Approved in CI"
+  },
+  {
+    "id": "228d900f-33cc-4a2f-99bc-89f627841465",
+    "createdAt": "2026-05-22T08:09:30.049Z",
+    "actor": "admin",
+    "actorRoles": [
+      "uploader",
+      "ApplicationModerator",
+      "Administrator"
+    ],
+    "action": "approve",
+    "submissionId": "741196db-6f54-4c03-b0c2-4b650e4dac99",
+    "slug": "ci-cmd-1779426448929",
+    "note": "Approved"
+  },
+  {
+    "id": "d12e01e2-fd61-4e80-9a03-1f3ec2d04634",
+    "createdAt": "2026-05-22T08:09:32.354Z",
+    "actor": "admin",
+    "actorRoles": [
+      "uploader",
+      "ApplicationModerator",
+      "Administrator"
+    ],
+    "action": "approve",
+    "submissionId": "71108068-3b02-4524-83bb-144d5e345552",
+    "slug": "ci-cmd-1779426798201",
+    "note": "Approved"
+  },
+  {
+    "id": "80cbe691-f5fe-4043-9fa5-69f0188964e0",
+    "createdAt": "2026-05-22T08:09:38.258Z",
+    "actor": "admin",
+    "actorRoles": [
+      "uploader",
+      "ApplicationModerator",
+      "Administrator"
+    ],
+    "action": "approve",
+    "submissionId": "6c80ec5b-17b5-4740-88f6-88d502919187",
+    "slug": "etest",
+    "note": "Approved"
   }
 ]

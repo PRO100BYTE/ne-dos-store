@@ -1,1 +1,26 @@
-[]
+[
+  {
+    "id": "f3681cc8-6c99-42b8-8e7e-1c564bb1a514",
+    "commandSlug": "ci-cmd-1779426448929",
+    "authorName": "CI Bot",
+    "rating": 5,
+    "comment": "ok",
+    "createdAt": "2026-05-22T05:07:28.964Z"
+  },
+  {
+    "id": "d5c2958b-330c-4eed-b91a-9856dfa4ff58",
+    "commandSlug": "ci-cmd-1779426798201",
+    "authorName": "CI Bot",
+    "rating": 5,
+    "comment": "ok",
+    "createdAt": "2026-05-22T05:13:18.221Z"
+  },
+  {
+    "id": "532d66ec-e19c-47d1-993b-34af68734136",
+    "commandSlug": "ci-cmd-1779436731538",
+    "authorName": "CI Bot",
+    "rating": 5,
+    "comment": "ok",
+    "createdAt": "2026-05-22T07:58:51.552Z"
+  }
+]

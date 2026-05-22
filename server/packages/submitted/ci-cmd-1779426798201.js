@@ -1,0 +1,1 @@
+export default class ci_cmd_1779426798201 { description() { return 'CI'; } help(term) { term.writeln('help'); } execute(term) { term.writeln('ok'); } }
