@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './AuthPage.css';
 import HttpErrorPage from './HttpErrorPage';
 
-function AuthPage({ onAuthSuccess, account, onLogout }) {
+function AuthPage({ onAuthSuccess, account, onLogout, onOpenProfile }) {
   const [authMode, setAuthMode] = useState('passport');
   const [isRegister, setIsRegister] = useState(false);
   const [username, setUsername] = useState('');
@@ -88,23 +88,15 @@ function AuthPage({ onAuthSuccess, account, onLogout }) {
       {account ? (
         <div className="auth-profile">
           <div className="profile-header">
-            <h3>Профиль</h3>
+            <h3>Вы уже вошли</h3>
           </div>
-          <div className="profile-info">
-            <div className="profile-item">
-              <span className="label">Имя:</span>
-              <span className="value">{account.displayName || '-'}</span>
-            </div>
-            <div className="profile-item">
-              <span className="label">Username:</span>
-              <span className="value">{account.username || '-'}</span>
-            </div>
-            <div className="profile-item">
-              <span className="label">Роли:</span>
-              <span className="value">{(account.roles || []).join(', ') || 'нет'}</span>
-            </div>
+          <p className="auth-profile-hint">
+            Для изменения данных используйте отдельную страницу профиля.
+          </p>
+          <div className="auth-profile-actions">
+            <button type="button" className="btn-submit" onClick={onOpenProfile}>Открыть профиль</button>
+            <button type="button" className="btn-logout" onClick={onLogout}>Выйти</button>
           </div>
-          <button type="button" className="btn-logout" onClick={onLogout}>Выйти</button>
         </div>
       ) : (
         <div className="auth-container">

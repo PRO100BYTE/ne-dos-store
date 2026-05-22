@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import './AdminPanel.css';
 import HttpErrorPage from './HttpErrorPage';
 
-function AdminPanel({ session, account, onLogout, onNavigate }) {
+function AdminPanel({ session, onLogout, onNavigate }) {
+  const [validatedAccount, setValidatedAccount] = useState(null);
+  const [authChecking, setAuthChecking] = useState(false);
   const [overview, setOverview] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [status, setStatus] = useState('pending');
@@ -10,10 +12,44 @@ function AdminPanel({ session, account, onLogout, onNavigate }) {
   const [httpError, setHttpError] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const isAdministrator = useMemo(() => {
-    const roles = (account && account.roles) || [];
-    return roles.includes('Administrator');
-  }, [account]);
+  useEffect(() => {
+    if (!session) {
+      setValidatedAccount(null);
+      return;
+    }
+
+    let mounted = true;
+    const verifySession = async () => {
+      setAuthChecking(true);
+      try {
+        const res = await fetch('/api/auth/session', {
+          headers: { 'x-nedos-session': session },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || 'Session invalid');
+        if (mounted) {
+          setValidatedAccount(data.account || null);
+        }
+      } catch {
+        if (mounted) {
+          setValidatedAccount(null);
+          onLogout();
+        }
+      } finally {
+        if (mounted) setAuthChecking(false);
+      }
+    };
+
+    verifySession();
+    return () => {
+      mounted = false;
+    };
+  }, [onLogout, session]);
+
+  const canAccessAdminPanel = useMemo(() => {
+    const roles = (validatedAccount && validatedAccount.roles) || [];
+    return roles.includes('Administrator') || roles.includes('ApplicationModerator');
+  }, [validatedAccount]);
 
   const authHeaders = useCallback(() => {
     const headers = { 'Content-Type': 'application/json' };
@@ -22,7 +58,7 @@ function AdminPanel({ session, account, onLogout, onNavigate }) {
   }, [session]);
 
   const loadAdminData = useCallback(async () => {
-    if (!session || !isAdministrator) return;
+    if (!session || !validatedAccount || !canAccessAdminPanel) return;
     setLoading(true);
     setError('');
     setHttpError(null);
@@ -52,7 +88,7 @@ function AdminPanel({ session, account, onLogout, onNavigate }) {
     } finally {
       setLoading(false);
     }
-  }, [authHeaders, isAdministrator, session, status]);
+  }, [authHeaders, canAccessAdminPanel, session, status, validatedAccount]);
 
   useEffect(() => {
     loadAdminData();
@@ -79,7 +115,15 @@ function AdminPanel({ session, account, onLogout, onNavigate }) {
     }
   };
 
-  if (!account) {
+  if (authChecking) {
+    return (
+      <section className="admin-section">
+        <div className="admin-state">Проверка сессии...</div>
+      </section>
+    );
+  }
+
+  if (!validatedAccount) {
     return (
       <section className="admin-section">
         <div className="admin-head">
@@ -93,16 +137,16 @@ function AdminPanel({ session, account, onLogout, onNavigate }) {
     );
   }
 
-  if (!isAdministrator) {
+  if (!canAccessAdminPanel) {
     return (
       <section className="admin-section">
         <div className="admin-head">
           <h2>Доступ запрещен</h2>
-          <p>Эта страница доступна только пользователям с ролью Administrator.</p>
+          <p>Эта страница доступна только пользователям с ролью Administrator или ApplicationModerator.</p>
         </div>
         <div className="admin-denied">
-          <div><strong>Пользователь:</strong> {account.displayName || account.username}</div>
-          <div><strong>Роли:</strong> {(account.roles || []).join(', ') || 'нет'}</div>
+          <div><strong>Пользователь:</strong> {validatedAccount.displayName || validatedAccount.username}</div>
+          <div><strong>Роли:</strong> {(validatedAccount.roles || []).join(', ') || 'нет'}</div>
           <div className="admin-denied-actions">
             <button type="button" onClick={() => onNavigate('catalog')}>Вернуться на главную</button>
             <button type="button" onClick={onLogout}>Выйти</button>
@@ -116,7 +160,7 @@ function AdminPanel({ session, account, onLogout, onNavigate }) {
     <section className="admin-section">
       <div className="admin-head">
         <h2>Админ-панель NE-DOS Store</h2>
-        <p>Авторизовано: {account.displayName || account.username} (Administrator)</p>
+        <p>Авторизовано: {validatedAccount.displayName || validatedAccount.username}</p>
       </div>
 
       <div className="admin-auth admin-auth--info">

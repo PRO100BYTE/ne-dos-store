@@ -7,6 +7,7 @@ import AdminPanel from './components/AdminPanel';
 import HttpErrorPage from './components/HttpErrorPage';
 import ApiStatusPage from './components/ApiStatusPage';
 import AuthPage from './components/AuthPage';
+import ProfilePage from './components/ProfilePage';
 
 function App() {
   const [apiOnline, setApiOnline] = useState(false);
@@ -16,6 +17,7 @@ function App() {
     if (path.startsWith('/auth')) return 'auth';
     if (path.startsWith('/status')) return 'status';
     if (path.startsWith('/admin')) return 'admin';
+    if (path.startsWith('/profile')) return 'profile';
     // Redirect invalid paths to catalog
     if (path !== '/' && path !== '') {
       window.history.replaceState({}, '', '/');
@@ -32,6 +34,11 @@ function App() {
     }
   });
 
+  const canAccessAdmin = Boolean(
+    account && Array.isArray(account.roles)
+      && account.roles.some((role) => role === 'Administrator' || role === 'ApplicationModerator')
+  );
+
   const navigate = (nextView) => {
     setView(nextView);
     const nextPath = nextView === 'status'
@@ -40,6 +47,8 @@ function App() {
         ? '/auth'
         : nextView === 'admin'
           ? '/admin'
+          : nextView === 'profile'
+            ? '/profile'
           : '/';
     if (window.location.pathname !== nextPath) {
       window.history.replaceState({}, '', nextPath);
@@ -58,7 +67,7 @@ function App() {
     setAccount(null);
     localStorage.removeItem('nedos-store-passport-session');
     localStorage.removeItem('nedos-store-passport-account');
-    setView((currentView) => currentView === 'admin' ? 'catalog' : currentView);
+    setView((currentView) => (currentView === 'admin' || currentView === 'profile') ? 'catalog' : currentView);
   }, []);
 
   useEffect(() => {
@@ -110,7 +119,10 @@ function App() {
         onNavigate={navigate}
         onOpenStatus={() => navigate('status')}
         account={account}
+        canAccessAdmin={canAccessAdmin}
         onOpenAuth={() => navigate('auth')}
+        onOpenProfile={() => navigate('profile')}
+        onOpenAdmin={() => navigate('admin')}
         onLogout={logout}
       />
       {apiError ? (
@@ -125,8 +137,9 @@ function App() {
           {view === 'catalog' && <CommandList />}
           {view === 'submit' && <SubmissionForm account={account} session={session} onOpenAuth={() => navigate('auth')} />}
           {view === 'status' && <ApiStatusPage />}
-          {view === 'auth' && <AuthPage onAuthSuccess={saveSession} account={account} onLogout={logout} />}
-          {view === 'admin' && <AdminPanel account={account} session={session} onNavigate={navigate} onLogout={logout} />}
+          {view === 'auth' && <AuthPage onAuthSuccess={saveSession} account={account} onLogout={logout} onOpenProfile={() => navigate('profile')} />}
+          {view === 'profile' && <ProfilePage account={account} session={session} onAuthSuccess={saveSession} onOpenAuth={() => navigate('auth')} />}
+          {view === 'admin' && <AdminPanel session={session} onNavigate={navigate} onLogout={logout} />}
         </>
       )}
       <footer className="footer">

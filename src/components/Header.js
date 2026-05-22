@@ -1,7 +1,58 @@
-import React from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './Header.css';
 
-function Header({ apiOnline, view, onNavigate, onOpenStatus, account, onOpenAuth, onLogout }) {
+function Header({
+  apiOnline,
+  view,
+  onNavigate,
+  onOpenStatus,
+  account,
+  canAccessAdmin,
+  onOpenAuth,
+  onOpenProfile,
+  onOpenAdmin,
+  onLogout,
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+  const userLabel = useMemo(() => (account ? (account.displayName || account.username || 'User') : 'Войти'), [account]);
+
+  useEffect(() => {
+    const onDocClick = (event) => {
+      if (!menuRef.current || menuRef.current.contains(event.target)) return;
+      setMenuOpen(false);
+    };
+    const onEscape = (event) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onEscape);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onEscape);
+    };
+  }, []);
+
+  const openAuth = () => {
+    setMenuOpen(false);
+    onOpenAuth();
+  };
+
+  const openProfile = () => {
+    setMenuOpen(false);
+    onOpenProfile();
+  };
+
+  const openAdmin = () => {
+    setMenuOpen(false);
+    onOpenAdmin();
+  };
+
+  const logout = () => {
+    setMenuOpen(false);
+    onLogout();
+  };
+
   return (
     <div className="Header">
       <button
@@ -26,12 +77,32 @@ function Header({ apiOnline, view, onNavigate, onOpenStatus, account, onOpenAuth
             {apiOnline ? 'API online' : 'API offline'}
           </button>
         </span>
-        <div className="user-menu">
-          <button type="button" className="user-btn" onClick={onOpenAuth}>
-            {account ? (account.displayName || account.username || 'User') : 'Войти'}
+        <div className="user-menu" ref={menuRef}>
+          <button
+            type="button"
+            className="user-btn"
+            onClick={() => setMenuOpen((prev) => !prev)}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            title={account ? 'Открыть меню пользователя' : 'Открыть меню входа'}
+          >
+            <span className="user-avatar">{userLabel.slice(0, 1).toUpperCase()}</span>
+            <span>{userLabel}</span>
+            <span className="user-caret">▾</span>
           </button>
-          {account && (
-            <button type="button" className="user-logout" onClick={onLogout}>Выйти</button>
+          {menuOpen && (
+            <div className="user-dropdown" role="menu">
+              {!account && (
+                <button type="button" className="dropdown-item" onClick={openAuth} role="menuitem">Войти / Регистрация</button>
+              )}
+              {account && (
+                <>
+                  <button type="button" className="dropdown-item" onClick={openProfile} role="menuitem">Профиль</button>
+                  {canAccessAdmin && <button type="button" className="dropdown-item" onClick={openAdmin} role="menuitem">Админ-панель</button>}
+                  <button type="button" className="dropdown-item danger" onClick={logout} role="menuitem">Выйти</button>
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>

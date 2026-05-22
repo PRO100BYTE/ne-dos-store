@@ -5,6 +5,24 @@ body,
   min-height: 100%;
 }
 
+:root {
+  color-scheme: dark;
+  --bg-main: #0d1117;
+  --bg-elevated: #161b22;
+  --bg-soft: #1f2631;
+  --text-main: #c9d1d9;
+  --text-muted: #8b949e;
+  --border-main: #30363d;
+  --border-strong: #484f58;
+  --accent: #2f81f7;
+  --accent-hover: #4493f8;
+  --danger: #f85149;
+  --success: #3fb950;
+  --shadow-card: 0 10px 32px rgba(1, 4, 9, 0.35);
+}
+
 body {
-  background: #060b08;
+  background: radial-gradient(circle at 15% -20%, rgba(47, 129, 247, 0.18) 0, rgba(13, 17, 23, 0) 35%), var(--bg-main);
+  color: var(--text-main);
+  font-family: 'IBM Plex Sans', 'Segoe UI Variable Text', 'Noto Sans', sans-serif;
 }

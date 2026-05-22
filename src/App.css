@@ -1,11 +1,10 @@
 .App {
   min-height: 100vh;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  color: #e8fff1;
+  color: var(--text-main);
   background:
-    radial-gradient(circle at 10% -20%, rgba(0, 255, 136, 0.12) 0, rgba(0, 0, 0, 0) 45%),
-    radial-gradient(circle at 90% 120%, rgba(0, 174, 255, 0.14) 0, rgba(0, 0, 0, 0) 35%),
-    #060b08;
+    radial-gradient(circle at 10% -20%, rgba(47, 129, 247, 0.15) 0, rgba(0, 0, 0, 0) 42%),
+    radial-gradient(circle at 85% 120%, rgba(63, 185, 80, 0.1) 0, rgba(0, 0, 0, 0) 30%),
+    var(--bg-main);
 }
 
 .App * {
@@ -17,9 +16,11 @@
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  padding: 18px;
+  border-top: 1px solid var(--border-main);
+  margin-top: 36px;
+  padding: 24px 18px 30px;
   gap: 8px;
-  opacity: 0.85;
+  background: rgba(22, 27, 34, 0.55);
 }
 
 .footer img {
@@ -30,5 +31,5 @@
 
 .footer span {
   font-size: 12px;
-  color: #9bc9b0;
+  color: var(--text-muted);
 }
