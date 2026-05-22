@@ -616,11 +616,36 @@ app.get('/api/auth/sculk/callback', (req, res) => {
 app.post('/api/auth/passport/register', (req, res) => {
   const username = usernameSafe(req.body?.username);
   const password = String(req.body?.password || '');
+  const passwordConfirm = String(req.body?.passwordConfirm || '');
   const displayName = String(req.body?.displayName || username || 'NE-DOS User').slice(0, 80);
   const linkedSculkId = req.body?.linkedSculkId ? String(req.body.linkedSculkId) : null;
 
-  if (!username || !password) {
-    res.status(400).json({ message: 'username and password are required' });
+  if (!username || !password || !passwordConfirm) {
+    res.status(400).json({ message: 'username, password and passwordConfirm are required' });
+    return;
+  }
+
+  // Проверка совпадения паролей
+  if (password !== passwordConfirm) {
+    res.status(400).json({ message: 'Пароли не совпадают' });
+    return;
+  }
+
+  // Валидация сложности пароля
+  if (password.length < 8) {
+    res.status(400).json({ message: 'Пароль должен быть не менее 8 символов' });
+    return;
+  }
+  if (!/[a-z]/.test(password)) {
+    res.status(400).json({ message: 'Пароль должен содержать строчные буквы' });
+    return;
+  }
+  if (!/[A-Z]/.test(password)) {
+    res.status(400).json({ message: 'Пароль должен содержать заглавные буквы' });
+    return;
+  }
+  if (!/[0-9]/.test(password)) {
+    res.status(400).json({ message: 'Пароль должен содержать цифры' });
     return;
   }
 
