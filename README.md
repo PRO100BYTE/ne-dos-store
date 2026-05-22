@@ -13,8 +13,10 @@ NE-DOS Store - fullstack-магазин команд для NE-DOS:
 - 72 core-команды из ветки `big-reload-1.3.0` репозитория `ne-dos`
 - 10 community-команд/программ, хранящихся внутри магазина
 - SHA-256 для install payload
-- публичная отправка команд на модерацию
-- админка для approve/reject
+- локальная авторизация `.nedos Passport`
+- вход через Sculk ID для связанных аккаунтов
+- публичная отправка команд на модерацию только для авторизованных пользователей
+- RBAC: uploader / moderator / admin
 - PostgreSQL-ready схема + файловый fallback
 - Docker-образ для fullstack-развёртывания
 - GitHub workflows: test, build, integration, deploy
@@ -32,11 +34,17 @@ NE-DOS Store - fullstack-магазин команд для NE-DOS:
 - Frontend: `http://localhost:3000`
 - API: `http://localhost:8787`
 
-Админ-токен по умолчанию в dev-режиме:
-- `ne-dos-admin-dev-token`
+Bootstrap-админ `.nedos Passport` по умолчанию в dev-режиме:
+- username: `admin`
+- password: `admin123`
+
+Sculk Callback URL для Strict URL Check:
+- `http://localhost:8787/api/auth/sculk/callback`
 
 Для production:
-- выставить `ADMIN_TOKEN`
+- выставить `PASSPORT_BOOTSTRAP_ADMIN`
+- выставить `PASSPORT_BOOTSTRAP_PASSWORD`
+- выставить `SCULK_CALLBACK_URL` (если callback не локальный)
 - при необходимости выставить `DATABASE_URL`
 
 ## Скрипты
@@ -53,6 +61,13 @@ NE-DOS Store - fullstack-магазин команд для NE-DOS:
 
 - `GET /api/health` - health check
 - `GET /api/meta` - категории, теги, происхождение, размер реестра, moderation stats
+- `GET /api/auth/sculk/config` - конфиг Sculk + callback URL
+- `GET /api/auth/sculk/callback` - callback endpoint
+- `POST /api/auth/sculk/login` - вход через Sculk ID
+- `POST /api/auth/passport/register` - регистрация `.nedos Passport`
+- `POST /api/auth/passport/login` - вход `.nedos Passport`
+- `POST /api/auth/passport/link-existing` - связка Sculk ID с существующим `.nedos Passport`
+- `GET /api/auth/session` - информация о текущей сессии
 - `GET /api/commands` - список команд
    - query params: `query`, `category`, `tag`, `sort`, `verified`, `origin`, `status`
 - `GET /api/commands/:slug` - карточка команды
@@ -60,12 +75,21 @@ NE-DOS Store - fullstack-магазин команд для NE-DOS:
 - `POST /api/commands/:slug/install-track` - фиксация установки
 - `GET /api/commands/:slug/reviews` - отзывы
 - `POST /api/commands/:slug/reviews` - оставить отзыв
-- `POST /api/submissions` - отправка community-команды в очередь модерации
-- `GET /api/admin/overview` - обзор магазина (admin)
-- `GET /api/admin/submissions` - очередь модерации (admin)
-- `POST /api/admin/submissions/:id/approve` - одобрить команду (admin)
-- `POST /api/admin/submissions/:id/reject` - отклонить команду (admin)
-- `PATCH /api/admin/commands/:slug` - правка community-команды (admin)
+- `POST /api/submissions` - отправка community-команды (uploader/moderator/admin)
+- `GET /api/admin/overview` - обзор магазина (moderator/admin)
+- `GET /api/admin/submissions` - очередь модерации (moderator/admin)
+- `POST /api/admin/submissions/:id/approve` - одобрить команду (moderator/admin)
+- `POST /api/admin/submissions/:id/reject` - отклонить команду (moderator/admin)
+- `GET /api/admin/moderation-history` - история модерации (admin)
+- `GET /api/admin/accounts` - список аккаунтов (admin)
+- `POST /api/admin/accounts` - создание аккаунта (admin)
+- `PATCH /api/admin/accounts/:username` - изменение аккаунта (admin)
+- `DELETE /api/admin/accounts/:username` - удаление аккаунта (admin)
+- `GET /api/admin/apps` - список приложений (admin)
+- `POST /api/admin/apps` - добавление приложения (admin)
+- `PATCH /api/admin/commands/:slug` - изменение/скрытие community-приложения (admin)
+- `DELETE /api/admin/apps/:slug` - удаление приложения (admin)
+- `GET /api/packages/core/:group/:file` - выдача core-пакетов из локального snapshot
 - `GET /api/packages/:scope/:file` - выдача локальных JS-пакетов магазина
 
 ## Источники каталога
@@ -78,12 +102,16 @@ NE-DOS Store - fullstack-магазин команд для NE-DOS:
 
 Скрипт:
 - `server/scripts/generate-core-registry.js`
+- `server/scripts/sync-core-packages.js`
 
 Он:
 - читает список команд из соседнего локального репозитория `../ne-dos`
 - забирает содержимое из ветки `big-reload-1.3.0`
 - считает `sha256`
 - генерирует `server/data/coreCommands.generated.json`
+- синхронизирует локальный snapshot в `server/packages/core/`
+
+Это дает fallback-модель: установка команд не зависит от доступности GitHub в runtime.
 
 ## PostgreSQL схема
 
@@ -97,12 +125,17 @@ NE-DOS Store - fullstack-магазин команд для NE-DOS:
 
 Если `DATABASE_URL` не задан, backend работает через JSON-файлы в `server/data/`.
 
-## Admin flow
+## Passport и роли
+
+- Документация по авторизации: `docs/passport-auth.md`
+- Документация по ролям: `docs/roles-and-access.md`
+
+## Moderation flow
 
 1. Пользователь отправляет команду через вкладку `Публикация`
 2. Скрипт сохраняется в `server/packages/submitted/`
 3. Backend считает SHA-256 и ставит статус `pending`
-4. Модератор заходит во вкладку `Админка`
+4. Модератор/админ заходит во вкладку `Админка`
 5. После `approve` команда сразу попадает в каталог
 
 ## Docker / deployment
@@ -135,8 +168,8 @@ NE-DOS Store - fullstack-магазин команд для NE-DOS:
 
 ## Дальнейшее развитие
 
-- OAuth / XorekID для авторов и модераторов
+- Интеграция PRO100ID (PRO100BYTE Team ID) как SSO-провайдера
+- Подключение Authentik как внешнего Identity Provider
 - Автоматическая подпись пакетов
 - PostgreSQL-only режим без JSON fallback
 - Публичные страницы авторов и changelog команд
-- Автообновление реестра из `ne-dos` по расписанию
