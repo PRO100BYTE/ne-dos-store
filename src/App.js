@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import './App.css';
 import Header from './components/Header';
 import CommandList from './components/CommandList';
@@ -48,13 +48,13 @@ function App() {
     localStorage.setItem('nedos-store-passport-account', JSON.stringify(nextAccount || null));
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setSession('');
     setAccount(null);
     localStorage.removeItem('nedos-store-passport-session');
     localStorage.removeItem('nedos-store-passport-account');
-    if (view === 'admin') navigate('catalog');
-  };
+    setView((currentView) => currentView === 'admin' ? 'catalog' : currentView);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -95,7 +95,7 @@ function App() {
       .catch(() => {
         logout();
       });
-  }, [session]);
+  }, [session, logout]);
 
   return (
     <div className="App">
