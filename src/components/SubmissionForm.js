@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import './SubmissionForm.css';
+import HttpErrorPage from './HttpErrorPage';
 
 const initialForm = {
   name: '',
@@ -20,6 +21,7 @@ function SubmissionForm() {
   const [sculkValue, setSculkValue] = useState('');
   const [sculkConfig, setSculkConfig] = useState(null);
   const [authError, setAuthError] = useState('');
+  const [authHttpError, setAuthHttpError] = useState(null);
   const [linkingInfo, setLinkingInfo] = useState(null);
   const [linkUsername, setLinkUsername] = useState('');
   const [linkPassword, setLinkPassword] = useState('');
@@ -36,6 +38,7 @@ function SubmissionForm() {
   });
   const [form, setForm] = useState(initialForm);
   const [result, setResult] = useState(null);
+  const [submitHttpError, setSubmitHttpError] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const update = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
@@ -51,6 +54,7 @@ function SubmissionForm() {
     setSession('');
     setAccount(null);
     setAuthError('');
+    setAuthHttpError(null);
     setLinkingInfo(null);
     localStorage.removeItem('nedos-store-passport-session');
     localStorage.removeItem('nedos-store-passport-account');
@@ -72,12 +76,17 @@ function SubmissionForm() {
       body: JSON.stringify({ username: passportUsername, password: passportPassword }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Не удалось войти в .nedos Passport');
+    if (!res.ok) {
+      const err = new Error(data.message || 'Не удалось войти в .nedos Passport');
+      err.httpStatus = res.status;
+      throw err;
+    }
     saveSession(data.session, data.account);
   }, [passportPassword, passportUsername, saveSession]);
 
   const loginWithSculk = useCallback(async () => {
     setAuthError('');
+    setAuthHttpError(null);
     setLinkingInfo(null);
     const body = { mode: sculkMode, [sculkMode === 'token' ? 'token' : 'code']: sculkValue };
     const res = await fetch('/api/auth/sculk/login', {
@@ -90,7 +99,11 @@ function SubmissionForm() {
       setLinkingInfo(data.sculkIdentity || null);
       throw new Error(data.message || 'Sculk ID не связан');
     }
-    if (!res.ok) throw new Error(data.message || 'Ошибка входа через Sculk ID');
+    if (!res.ok) {
+      const err = new Error(data.message || 'Ошибка входа через Sculk ID');
+      err.httpStatus = res.status;
+      throw err;
+    }
     saveSession(data.session, data.account);
   }, [saveSession, sculkMode, sculkValue]);
 
@@ -106,7 +119,11 @@ function SubmissionForm() {
       }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Не удалось привязать аккаунт');
+    if (!res.ok) {
+      const err = new Error(data.message || 'Не удалось привязать аккаунт');
+      err.httpStatus = res.status;
+      throw err;
+    }
     setAuthError('');
     setLinkingInfo(null);
     saveSession(data.session, data.account);
@@ -125,7 +142,11 @@ function SubmissionForm() {
       }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Не удалось зарегистрировать .nedos Passport');
+    if (!res.ok) {
+      const err = new Error(data.message || 'Не удалось зарегистрировать .nedos Passport');
+      err.httpStatus = res.status;
+      throw err;
+    }
     setAuthError('');
     setLinkingInfo(null);
     saveSession(data.session, data.account);
@@ -140,6 +161,7 @@ function SubmissionForm() {
       }
     } catch (error) {
       setAuthError(error.message);
+      setAuthHttpError({ status: error.httpStatus || 500, message: error.message });
     }
   }, [loginMode, loginWithPassport, loginWithSculk]);
 
@@ -147,6 +169,7 @@ function SubmissionForm() {
     event.preventDefault();
     setLoading(true);
     setResult(null);
+    setSubmitHttpError(null);
     try {
       if (!session) {
         throw new Error('Для загрузки команды нужен вход в .nedos Passport');
@@ -160,11 +183,16 @@ function SubmissionForm() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Не удалось отправить команду');
+      if (!res.ok) {
+        const err = new Error(data.message || 'Не удалось отправить команду');
+        err.httpStatus = res.status;
+        throw err;
+      }
       setResult({ ok: true, data });
       setForm(initialForm);
     } catch (error) {
       setResult({ ok: false, message: error.message });
+      setSubmitHttpError({ status: error.httpStatus || 500, message: error.message });
     } finally {
       setLoading(false);
     }
@@ -219,7 +247,16 @@ function SubmissionForm() {
           <div className="submit-result ok">Выполнен вход: {account.displayName || account.username}. Роли: {(account.roles || []).join(', ')}</div>
         )}
 
-        {authError && <div className="submit-result fail">{authError}</div>}
+        {authError && !authHttpError && <div className="submit-result fail">{authError}</div>}
+
+        {authHttpError && (
+          <HttpErrorPage
+            status={authHttpError.status}
+            title="Ошибка авторизации"
+            message={authHttpError.message}
+            onRetry={performLogin}
+          />
+        )}
 
         {linkingInfo && (
           <div className="submission-linking">
@@ -260,7 +297,16 @@ function SubmissionForm() {
         </div>
       )}
 
-      {result && !result.ok && <div className="submit-result fail">{result.message}</div>}
+      {result && !result.ok && !submitHttpError && <div className="submit-result fail">{result.message}</div>}
+
+      {submitHttpError && (
+        <HttpErrorPage
+          status={submitHttpError.status}
+          title="Ошибка отправки команды"
+          message={submitHttpError.message}
+          onRetry={() => setSubmitHttpError(null)}
+        />
+      )}
     </section>
   );
 }

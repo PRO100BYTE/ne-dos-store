@@ -1,0 +1,58 @@
+.http-error-page {
+  position: relative;
+  border: 1px solid #284d39;
+  border-radius: 16px;
+  overflow: hidden;
+  background: radial-gradient(circle at 12% 20%, rgba(255, 64, 64, 0.14), rgba(0, 0, 0, 0) 55%), #08110d;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.http-error-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(135deg, rgba(255, 80, 80, 0.1), rgba(0, 0, 0, 0)),
+    linear-gradient(45deg, rgba(0, 255, 170, 0.06), rgba(0, 0, 0, 0));
+}
+
+.http-error-content {
+  position: relative;
+  padding: 20px;
+}
+
+.http-error-code {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  color: #ff7d7d;
+  margin-bottom: 10px;
+}
+
+.http-error-content h2 {
+  margin: 0 0 6px;
+}
+
+.http-error-content p {
+  margin: 0 0 12px;
+  color: #cbe9d8;
+}
+
+.http-error-content pre {
+  margin: 0 0 12px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #345846;
+  background: #0c1813;
+  color: #99d8b9;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.http-error-content button {
+  border: 1px solid #2f6147;
+  background: #12231a;
+  color: #c7ffe0;
+  border-radius: 10px;
+  padding: 10px 14px;
+}

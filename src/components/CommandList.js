@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './CommandList.css';
+import HttpErrorPage from './HttpErrorPage';
 
 function CommandList() {
     const [commands, setCommands] = useState([]);
@@ -10,7 +11,20 @@ function CommandList() {
     const [sort, setSort] = useState('downloads');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [httpError, setHttpError] = useState(null);
     const [installHints, setInstallHints] = useState({});
+
+    const fetchJson = async (url, fallbackMessage) => {
+        const res = await fetch(url);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            const err = new Error(data.message || fallbackMessage);
+            err.httpStatus = res.status;
+            err.httpDetails = data.details || '';
+            throw err;
+        }
+        return data;
+    };
 
     const searchParams = useMemo(() => {
         const params = new URLSearchParams();
@@ -25,16 +39,11 @@ function CommandList() {
         let mounted = true;
         setLoading(true);
         setError('');
+        setHttpError(null);
 
         Promise.all([
-            fetch(`/api/commands?${searchParams}`).then((res) => {
-                if (!res.ok) throw new Error('Не удалось загрузить команды');
-                return res.json();
-            }),
-            fetch('/api/meta').then((res) => {
-                if (!res.ok) throw new Error('Не удалось загрузить метаданные');
-                return res.json();
-            }),
+            fetchJson(`/api/commands?${searchParams}`, 'Не удалось загрузить команды'),
+            fetchJson('/api/meta', 'Не удалось загрузить метаданные'),
         ])
             .then(([catalog, metaInfo]) => {
                 if (!mounted) return;
@@ -44,6 +53,11 @@ function CommandList() {
             .catch((err) => {
                 if (!mounted) return;
                 setError(err.message || 'Ошибка загрузки');
+                setHttpError({
+                    status: err.httpStatus || 500,
+                    message: err.message || 'Ошибка загрузки',
+                    details: err.httpDetails || '',
+                });
             })
             .finally(() => {
                 if (mounted) setLoading(false);
@@ -56,17 +70,24 @@ function CommandList() {
 
     const handleInstall = async (slug) => {
         try {
-            const res = await fetch(`/api/commands/${slug}/install`);
-            if (!res.ok) throw new Error('Не удалось получить install-инструкцию');
-            const data = await res.json();
+            const data = await fetchJson(`/api/commands/${slug}/install`, 'Не удалось получить install-инструкцию');
             setInstallHints((prev) => ({ ...prev, [slug]: data }));
             await fetch(`/api/commands/${slug}/install-track`, { method: 'POST' });
         } catch (err) {
+            setHttpError({
+                status: err.httpStatus || 500,
+                message: err.message || 'Ошибка установки',
+                details: err.httpDetails || `Команда: ${slug}`,
+            });
             setInstallHints((prev) => ({
                 ...prev,
                 [slug]: { error: err.message || 'Ошибка установки' },
             }));
         }
+    };
+
+    const retryCatalog = () => {
+        window.location.reload();
     };
 
   return (
@@ -104,9 +125,19 @@ function CommandList() {
             </div>
 
             {loading && <div className="state-box">Загрузка каталога...</div>}
-            {!loading && error && <div className="state-box error">{error}</div>}
+            {!loading && error && !httpError && <div className="state-box error">{error}</div>}
 
-            {!loading && !error && (
+            {!loading && httpError && (
+                <HttpErrorPage
+                    status={httpError.status}
+                    title="Ошибка доступа к каталогу NE-DOS Store"
+                    message={httpError.message}
+                    details={httpError.details}
+                    onRetry={retryCatalog}
+                />
+            )}
+
+            {!loading && !error && !httpError && (
                 <div className="CommandList">
                     {commands.map((command) => {
                         const hint = installHints[command.slug];

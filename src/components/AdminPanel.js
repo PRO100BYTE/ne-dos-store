@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import './AdminPanel.css';
+import HttpErrorPage from './HttpErrorPage';
 
 function AdminPanel() {
   const [mode, setMode] = useState('token');
@@ -17,6 +18,7 @@ function AdminPanel() {
   const [submissions, setSubmissions] = useState([]);
   const [status, setStatus] = useState('pending');
   const [error, setError] = useState('');
+  const [httpError, setHttpError] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const authHeaders = useCallback(() => {
@@ -45,6 +47,7 @@ function AdminPanel() {
     const headers = authHeaders();
     setLoading(true);
     setError('');
+    setHttpError(null);
     try {
       const [overviewRes, submissionsRes] = await Promise.all([
         fetch('/api/admin/overview', { headers }),
@@ -52,12 +55,21 @@ function AdminPanel() {
       ]);
       const overviewData = await overviewRes.json();
       const submissionsData = await submissionsRes.json();
-      if (!overviewRes.ok) throw new Error(overviewData.message || 'Admin auth failed');
-      if (!submissionsRes.ok) throw new Error(submissionsData.message || 'Failed to load submissions');
+      if (!overviewRes.ok) {
+        const err = new Error(overviewData.message || 'Admin auth failed');
+        err.httpStatus = overviewRes.status;
+        throw err;
+      }
+      if (!submissionsRes.ok) {
+        const err = new Error(submissionsData.message || 'Failed to load submissions');
+        err.httpStatus = submissionsRes.status;
+        throw err;
+      }
       setOverview(overviewData);
       setSubmissions(submissionsData.items || []);
     } catch (err) {
       setError(err.message);
+      setHttpError({ status: err.httpStatus || 500, message: err.message });
       if (/auth|required|session/i.test(err.message)) {
         handleLogout();
       }
@@ -74,6 +86,7 @@ function AdminPanel() {
 
     setLoading(true);
     setError('');
+    setHttpError(null);
     try {
       const res = await fetch('/api/auth/sculk/login', {
         method: 'POST',
@@ -81,7 +94,11 @@ function AdminPanel() {
         body: JSON.stringify({ mode, [mode === 'token' ? 'token' : 'code']: authValue.trim() }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Sculk login failed');
+      if (!res.ok) {
+        const err = new Error(data.message || 'Sculk login failed');
+        err.httpStatus = res.status;
+        throw err;
+      }
 
       setSession(data.session);
       setProfile(data.account || null);
@@ -90,6 +107,7 @@ function AdminPanel() {
       setAuthValue('');
     } catch (err) {
       setError(err.message);
+      setHttpError({ status: err.httpStatus || 500, message: err.message });
     } finally {
       setLoading(false);
     }
@@ -113,10 +131,15 @@ function AdminPanel() {
         body: JSON.stringify({ moderationNote: note || '' }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Moderation failed');
+      if (!res.ok) {
+        const err = new Error(data.message || 'Moderation failed');
+        err.httpStatus = res.status;
+        throw err;
+      }
       await load();
     } catch (err) {
       setError(err.message);
+      setHttpError({ status: err.httpStatus || 500, message: err.message });
     }
   };
 
@@ -151,9 +174,18 @@ function AdminPanel() {
         {profile && <strong>{profile.displayName || profile.username || 'NE-DOS User'}</strong>}
       </div>
 
-      {error && <div className="admin-error">{error}</div>}
+      {error && !httpError && <div className="admin-error">{error}</div>}
 
-      {overview && (
+      {httpError && (
+        <HttpErrorPage
+          status={httpError.status}
+          title="Ошибка админского API"
+          message={httpError.message}
+          onRetry={load}
+        />
+      )}
+
+      {overview && !httpError && (
         <div className="admin-stats">
           <div className="admin-card"><strong>{overview.commands}</strong><span>команд в каталоге</span></div>
           <div className="admin-card"><strong>{overview.submissions.pending}</strong><span>pending</span></div>
@@ -162,38 +194,42 @@ function AdminPanel() {
         </div>
       )}
 
-      <div className="admin-toolbar">
-        <select value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="pending">Pending</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
-        </select>
-      </div>
+      {!httpError && (
+        <div className="admin-toolbar">
+          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+      )}
 
       {loading && <div className="admin-state">Загрузка админки...</div>}
       {!session && <div className="admin-state">Требуется вход через .nedos Passport (роль admin).</div>}
 
-      <div className="admin-list">
-        {submissions.map((item) => (
-          <article className="admin-item" key={item.id}>
-            <div className="admin-item__head">
-              <h3>{item.slug}</h3>
-              <span>{item.status}</span>
-            </div>
-            <p>{item.description}</p>
-            <div className="admin-meta">
-              <span>{item.author}</span>
-              <span>{item.category}</span>
-              <span>{item.version}</span>
-            </div>
-            <code>{item.sha256}</code>
-            <div className="admin-actions">
-              <button onClick={() => moderate(item.id, 'approve')}>Approve</button>
-              <button onClick={() => moderate(item.id, 'reject')}>Reject</button>
-            </div>
-          </article>
-        ))}
-      </div>
+      {!httpError && (
+        <div className="admin-list">
+          {submissions.map((item) => (
+            <article className="admin-item" key={item.id}>
+              <div className="admin-item__head">
+                <h3>{item.slug}</h3>
+                <span>{item.status}</span>
+              </div>
+              <p>{item.description}</p>
+              <div className="admin-meta">
+                <span>{item.author}</span>
+                <span>{item.category}</span>
+                <span>{item.version}</span>
+              </div>
+              <code>{item.sha256}</code>
+              <div className="admin-actions">
+                <button onClick={() => moderate(item.id, 'approve')}>Approve</button>
+                <button onClick={() => moderate(item.id, 'reject')}>Reject</button>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
