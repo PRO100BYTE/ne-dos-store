@@ -13,6 +13,76 @@
   margin-bottom: 18px;
 }
 
+.submission-auth-box {
+  margin-bottom: 14px;
+  border: 1px solid #244c37;
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(12, 29, 20, 0.7);
+}
+
+.submission-auth-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.submission-auth-row input,
+.submission-auth-row select {
+  background: #0b1310;
+  color: #d6ffe7;
+  border: 1px solid #284534;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.submission-auth-row button,
+.submission-linking button {
+  border: 1px solid #2f6147;
+  background: #12231a;
+  color: #c7ffe0;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.submission-auth-hint {
+  color: #9ec2b0;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.submission-auth-hint a {
+  color: #86ffb5;
+  word-break: break-all;
+}
+
+.submission-linking {
+  margin-top: 10px;
+  border: 1px solid #335741;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.submission-linking p {
+  margin-top: 0;
+  color: #c8f4da;
+}
+
+.submission-linking-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.submission-linking-grid input {
+  background: #0b1310;
+  color: #d6ffe7;
+  border: 1px solid #284534;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
 .submission-form {
   display: flex;
   flex-direction: column;
@@ -71,6 +141,10 @@
 
 @media (max-width: 900px) {
   .submission-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .submission-linking-grid {
     grid-template-columns: 1fr;
   }
 }

@@ -1,4 +1,3 @@
-const adminToken = process.env.ADMIN_TOKEN || 'ne-dos-admin-dev-token';
 const baseUrl = process.env.STORE_BASE_URL || 'http://localhost:8787';
 
 async function request(url, options = {}) {
@@ -14,6 +13,25 @@ async function main() {
   const health = await request('/api/health');
   if (health.status !== 'ok') throw new Error('Health check failed');
 
+  const authUser = `ci-user-${Date.now()}`;
+  const register = await request('/api/auth/passport/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      username: authUser,
+      password: 'ci-password',
+      displayName: 'CI Uploader',
+    }),
+  });
+  if (!register.session) throw new Error('Passport registration failed');
+
+  const adminLogin = await request('/api/auth/passport/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: process.env.PASSPORT_BOOTSTRAP_ADMIN || 'admin', password: process.env.PASSPORT_BOOTSTRAP_PASSWORD || 'admin123' }),
+  });
+  if (!adminLogin.session) throw new Error('Passport admin login failed');
+
   const meta = await request('/api/meta');
   if (!meta.count || meta.count < 70) throw new Error('Catalog count is unexpectedly low');
 
@@ -26,7 +44,7 @@ async function main() {
   const slug = `ci-cmd-${Date.now()}`;
   const submission = await request('/api/submissions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-nedos-session': register.session },
     body: JSON.stringify({
       name: slug,
       title: 'CI Command',
@@ -43,7 +61,7 @@ async function main() {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-admin-token': adminToken,
+      'x-nedos-session': adminLogin.session,
     },
     body: JSON.stringify({ moderationNote: 'Approved in CI' }),
   });

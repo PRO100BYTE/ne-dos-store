@@ -15,6 +15,24 @@
   margin-bottom: 14px;
 }
 
+.admin-auth {
+  flex-wrap: wrap;
+}
+
+.admin-sculk {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 14px;
+  color: #9ec2b0;
+}
+
+.admin-sculk a {
+  color: #86ffb5;
+  word-break: break-all;
+}
+
 .admin-auth input,
 .admin-toolbar select {
   background: #0b1310;

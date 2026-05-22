@@ -11,6 +11,15 @@ const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 8787;
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'ne-dos-admin-dev-token';
+const SCULK_AUTHORIZE_URL = process.env.SCULK_AUTHORIZE_URL || 'https://my.sculk.ltd/api/sso/authorize';
+const SCULK_CALLBACK_URL = process.env.SCULK_CALLBACK_URL || `http://localhost:${PORT}/api/auth/sculk/callback`;
+const SCULK_TOKEN_URL = process.env.SCULK_TOKEN_URL || '';
+const SCULK_VALIDATE_URL = process.env.SCULK_VALIDATE_URL || '';
+const SCULK_SESSION_SECRET = process.env.SCULK_SESSION_SECRET || 'ne-dos-store-sculk-dev-secret';
+const SCULK_ALLOW_CODE_FALLBACK = String(process.env.SCULK_ALLOW_CODE_FALLBACK || 'true') === 'true';
+const SCULK_ALLOW_TOKEN_FALLBACK = String(process.env.SCULK_ALLOW_TOKEN_FALLBACK || 'true') === 'true';
+const PASSPORT_BOOTSTRAP_ADMIN = process.env.PASSPORT_BOOTSTRAP_ADMIN || 'admin';
+const PASSPORT_BOOTSTRAP_PASSWORD = process.env.PASSPORT_BOOTSTRAP_PASSWORD || 'admin123';
 
 const DATA_DIR = path.join(__dirname, 'data');
 const PACKAGES_DIR = path.join(__dirname, 'packages');
@@ -23,6 +32,8 @@ const COMMUNITY_REGISTRY_FILE = path.join(DATA_DIR, 'communityCommands.json');
 const SUBMISSIONS_FILE = path.join(DATA_DIR, 'submissions.json');
 const REVIEWS_FILE = path.join(DATA_DIR, 'reviews.json');
 const INSTALL_HISTORY_FILE = path.join(DATA_DIR, 'install-history.json');
+const PASSPORT_ACCOUNTS_FILE = path.join(DATA_DIR, 'passportAccounts.json');
+const MODERATION_HISTORY_FILE = path.join(DATA_DIR, 'moderation-history.json');
 const SCHEMA_FILE = path.join(__dirname, 'db', 'schema.sql');
 
 const db = process.env.DATABASE_URL
@@ -54,6 +65,113 @@ function sha256FromFile(filePath) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
 
+function passwordHash(password) {
+  return sha256FromText(`.nedos-passport:${String(password)}`);
+}
+
+function base64UrlEncode(value) {
+  return Buffer.from(value).toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+
+function base64UrlDecode(value) {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+  return Buffer.from(padded, 'base64').toString('utf8');
+}
+
+function signSculkSession(payload) {
+  const body = base64UrlEncode(JSON.stringify(payload));
+  const signature = crypto.createHmac('sha256', SCULK_SESSION_SECRET).update(body).digest('hex');
+  return `${body}.${signature}`;
+}
+
+function verifySculkSession(token) {
+  if (!token || typeof token !== 'string') return null;
+  const [body, signature] = token.split('.');
+  if (!body || !signature) return null;
+  const expected = crypto.createHmac('sha256', SCULK_SESSION_SECRET).update(body).digest('hex');
+  if (expected !== signature) return null;
+  try {
+    const payload = JSON.parse(base64UrlDecode(body));
+    if (payload.expiresAt && Date.now() > Number(payload.expiresAt)) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function loadPassportAccounts() {
+  const accounts = readJson(PASSPORT_ACCOUNTS_FILE, []);
+  if (!Array.isArray(accounts)) return [];
+  return accounts;
+}
+
+function savePassportAccounts(accounts) {
+  writeJson(PASSPORT_ACCOUNTS_FILE, accounts);
+}
+
+function safeAccount(account) {
+  return {
+    id: account.id,
+    username: account.username,
+    displayName: account.displayName,
+    roles: Array.isArray(account.roles) ? account.roles : [],
+    linkedSculkIds: Array.isArray(account.linkedSculkIds) ? account.linkedSculkIds : [],
+    status: account.status || 'active',
+    createdAt: account.createdAt,
+    updatedAt: account.updatedAt,
+  };
+}
+
+function createPassportSession(account, authMethod = 'local') {
+  return signSculkSession({
+    kind: 'passport',
+    authMethod,
+    accountId: account.id,
+    username: account.username,
+    displayName: account.displayName,
+    roles: Array.isArray(account.roles) ? account.roles : [],
+    issuedAt: Date.now(),
+    expiresAt: Date.now() + (1000 * 60 * 60 * 24 * 7),
+  });
+}
+
+function sessionFromRequest(req) {
+  const token = req.header('x-nedos-session')
+    || req.header('x-sculk-session')
+    || String(req.header('authorization') || '').replace(/^Bearer\s+/i, '');
+  return verifySculkSession(token);
+}
+
+function findAccountBySession(session) {
+  if (!session || session.kind !== 'passport' || !session.accountId) return null;
+  return loadPassportAccounts().find((item) => item.id === session.accountId && item.status !== 'disabled') || null;
+}
+
+function appendModerationHistory(entry) {
+  const rows = readJson(MODERATION_HISTORY_FILE, []);
+  rows.push({ id: crypto.randomUUID(), createdAt: nowIso(), ...entry });
+  writeJson(MODERATION_HISTORY_FILE, rows);
+}
+
+function ensureBootstrapAdmin() {
+  const accounts = loadPassportAccounts();
+  if (accounts.some((item) => item.username === PASSPORT_BOOTSTRAP_ADMIN)) return;
+
+  accounts.push({
+    id: crypto.randomUUID(),
+    username: PASSPORT_BOOTSTRAP_ADMIN,
+    displayName: '.nedos Passport Admin',
+    passwordHash: passwordHash(PASSPORT_BOOTSTRAP_PASSWORD),
+    roles: ['uploader', 'moderator', 'admin'],
+    linkedSculkIds: [],
+    status: 'active',
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  });
+  savePassportAccounts(accounts);
+}
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -74,6 +192,7 @@ function normalizeCommand(command) {
     tags: Array.isArray(command.tags) ? command.tags : [],
     status: command.status || 'approved',
     origin: command.origin || 'community',
+    hidden: Boolean(command.hidden),
   };
 }
 
@@ -87,6 +206,13 @@ function fileNameSafe(value) {
     .replace(/[^a-z0-9_-]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 60);
+}
+
+function usernameSafe(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '')
+    .slice(0, 40);
 }
 
 function commandTitle(name) {
@@ -246,7 +372,8 @@ async function loadPublishedCommands() {
       status: 'approved',
     }));
 
-  return [...loadCoreCommands(), ...loadCommunityCommands(), ...approvedSubmissions];
+  return [...loadCoreCommands(), ...loadCommunityCommands(), ...approvedSubmissions]
+    .filter((item) => !item.hidden);
 }
 
 async function loadAllCommandsAndMeta() {
@@ -303,12 +430,78 @@ function sortCommands(commands, sortBy) {
 }
 
 function adminOnly(req, res, next) {
+  const sculkSession = sessionFromRequest(req);
   const token = req.header('x-admin-token');
   if (!token || token !== ADMIN_TOKEN) {
-    res.status(401).json({ message: 'Admin token required' });
-    return;
+    const account = findAccountBySession(sculkSession);
+    if (!sculkSession || sculkSession.kind !== 'passport' || !Array.isArray(sculkSession.roles) || !sculkSession.roles.includes('admin') || !account) {
+      res.status(401).json({ message: 'Admin role required (.nedos Passport or admin token)' });
+      return;
+    }
+    req.passportSession = sculkSession;
+    req.passportAccount = account;
   }
   next();
+}
+
+function requirePassport(req, res, next) {
+  const session = sessionFromRequest(req);
+  const account = findAccountBySession(session);
+  if (!session || !account) {
+    res.status(401).json({ message: 'Вход обязателен: .nedos Passport' });
+    return;
+  }
+  req.passportSession = session;
+  req.passportAccount = account;
+  next();
+}
+
+function requireRole(roles, message) {
+  const expected = Array.isArray(roles) ? roles : [roles];
+  return (req, res, next) => {
+    const session = sessionFromRequest(req);
+    const account = findAccountBySession(session);
+    if (!session || !account) {
+      res.status(401).json({ message: 'Вход обязателен: .nedos Passport' });
+      return;
+    }
+    const hasRole = expected.some((role) => (account.roles || []).includes(role));
+    if (!hasRole) {
+      res.status(403).json({ message: message || `Требуется роль: ${expected.join(' / ')}` });
+      return;
+    }
+    req.passportSession = session;
+    req.passportAccount = account;
+    next();
+  };
+}
+
+async function validateSculkToken(token) {
+  if (!token) return null;
+  if (SCULK_VALIDATE_URL) {
+    const response = await fetch(SCULK_VALIDATE_URL, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) return null;
+    return response.json();
+  }
+  if (!SCULK_ALLOW_TOKEN_FALLBACK) return null;
+  return { id: `sculk-${sha256FromText(token).slice(0, 12)}`, name: 'Sculk User', tokenMode: 'fallback' };
+}
+
+async function exchangeSculkCode(code) {
+  if (!code) return null;
+  if (SCULK_TOKEN_URL) {
+    const response = await fetch(SCULK_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, grant_type: 'authorization_code' }),
+    });
+    if (!response.ok) return null;
+    return response.json();
+  }
+  if (!SCULK_ALLOW_CODE_FALLBACK) return null;
+  return { access_token: code, token_type: 'Bearer', fallback: true };
 }
 
 async function resolveCommandWithVerification(command) {
@@ -343,6 +536,12 @@ async function resolveCommandWithVerification(command) {
 function packageFilePath(scope, slug) {
   if (scope === 'community') return path.join(COMMUNITY_DIR, `${slug}.js`);
   if (scope === 'submitted') return path.join(SUBMITTED_DIR, `${slug}.js`);
+  if (scope === 'core') {
+    const commands = readJson(CORE_REGISTRY_FILE, []);
+    const command = commands.find((item) => item.slug === slug);
+    if (!command || !command.packagePath) return null;
+    return path.join(__dirname, 'packages', 'core', command.packagePath);
+  }
   return null;
 }
 
@@ -362,6 +561,174 @@ app.get('/api/health', async (_req, res) => {
     now: nowIso(),
     db: dbStatus,
   });
+});
+
+app.get('/api/auth/sculk/config', (_req, res) => {
+  res.json({
+    authorizeUrl: SCULK_AUTHORIZE_URL,
+    callbackUrl: SCULK_CALLBACK_URL,
+    authType: 'oauth-without-oidc',
+    modes: ['token', 'code'],
+    canExchangeCode: Boolean(SCULK_TOKEN_URL) || SCULK_ALLOW_CODE_FALLBACK,
+    canAcceptToken: Boolean(SCULK_VALIDATE_URL) || SCULK_ALLOW_TOKEN_FALLBACK,
+    accountSystem: '.nedos Passport',
+  });
+});
+
+app.get('/api/auth/sculk/callback', (req, res) => {
+  res.json({
+    ok: true,
+    message: 'Sculk callback accepted. Exchange the code using POST /api/auth/sculk/login with mode=code.',
+    code: req.query.code ? String(req.query.code) : null,
+  });
+});
+
+app.post('/api/auth/passport/register', (req, res) => {
+  const username = usernameSafe(req.body?.username);
+  const password = String(req.body?.password || '');
+  const displayName = String(req.body?.displayName || username || 'NE-DOS User').slice(0, 80);
+  const linkedSculkId = req.body?.linkedSculkId ? String(req.body.linkedSculkId) : null;
+
+  if (!username || !password) {
+    res.status(400).json({ message: 'username and password are required' });
+    return;
+  }
+
+  const accounts = loadPassportAccounts();
+  if (accounts.some((item) => item.username === username)) {
+    res.status(409).json({ message: 'Такой .nedos Passport уже существует' });
+    return;
+  }
+
+  const entry = {
+    id: crypto.randomUUID(),
+    username,
+    displayName,
+    passwordHash: passwordHash(password),
+    roles: ['uploader'],
+    linkedSculkIds: linkedSculkId ? [linkedSculkId] : [],
+    status: 'active',
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  };
+  accounts.push(entry);
+  savePassportAccounts(accounts);
+
+  const session = createPassportSession(entry, linkedSculkId ? 'sculk-linked-register' : 'local-register');
+  res.status(201).json({ session, account: safeAccount(entry) });
+});
+
+app.post('/api/auth/passport/login', (req, res) => {
+  const username = usernameSafe(req.body?.username);
+  const password = String(req.body?.password || '');
+  if (!username || !password) {
+    res.status(400).json({ message: 'username and password are required' });
+    return;
+  }
+
+  const account = loadPassportAccounts().find((item) => item.username === username && item.status !== 'disabled');
+  if (!account || account.passwordHash !== passwordHash(password)) {
+    res.status(401).json({ message: 'Неверные данные .nedos Passport' });
+    return;
+  }
+
+  const session = createPassportSession(account, 'local');
+  res.json({ session, account: safeAccount(account) });
+});
+
+app.post('/api/auth/passport/link-existing', (req, res) => {
+  const username = usernameSafe(req.body?.username);
+  const password = String(req.body?.password || '');
+  const linkedSculkId = String(req.body?.linkedSculkId || '').trim();
+  if (!username || !password || !linkedSculkId) {
+    res.status(400).json({ message: 'username, password and linkedSculkId are required' });
+    return;
+  }
+
+  const accounts = loadPassportAccounts();
+  const idx = accounts.findIndex((item) => item.username === username && item.status !== 'disabled');
+  if (idx === -1 || accounts[idx].passwordHash !== passwordHash(password)) {
+    res.status(401).json({ message: 'Неверные данные .nedos Passport' });
+    return;
+  }
+
+  const account = { ...accounts[idx] };
+  account.linkedSculkIds = Array.from(new Set([...(account.linkedSculkIds || []), linkedSculkId]));
+  account.updatedAt = nowIso();
+  accounts[idx] = account;
+  savePassportAccounts(accounts);
+
+  const session = createPassportSession(account, 'sculk-linked-existing');
+  res.json({ session, account: safeAccount(account) });
+});
+
+app.get('/api/auth/session', requirePassport, (req, res) => {
+  res.json({ account: safeAccount(req.passportAccount), session: req.passportSession });
+});
+
+app.post('/api/auth/sculk/login', async (req, res) => {
+  const mode = String(req.body?.mode || '').toLowerCase();
+
+  if (mode === 'token') {
+    const token = String(req.body?.token || '').trim();
+    const profile = await validateSculkToken(token);
+    if (!profile) {
+      res.status(401).json({ message: 'Invalid Sculk token' });
+      return;
+    }
+
+    const sculkIdentity = {
+      id: String(profile.id || profile.sub || profile.user_id || '').trim(),
+      name: profile.name || profile.username || 'Sculk User',
+      profile,
+    };
+    const account = loadPassportAccounts().find((item) => (item.linkedSculkIds || []).includes(sculkIdentity.id) && item.status !== 'disabled');
+    if (!sculkIdentity.id || !account) {
+      res.status(409).json({
+        code: 'SCULK_NOT_LINKED',
+        message: 'Sculk ID не связан с .nedos Passport. Укажите существующую учетную запись NE-DOS или зарегистрируйте новую.',
+        sculkIdentity,
+      });
+      return;
+    }
+
+    const session = createPassportSession(account, 'sculk-token');
+    res.json({ session, profile, account: safeAccount(account) });
+    return;
+  }
+
+  if (mode === 'code') {
+    const code = String(req.body?.code || '').trim();
+    const exchange = await exchangeSculkCode(code);
+    if (!exchange) {
+      res.status(401).json({ message: 'Unable to exchange Sculk grant code' });
+      return;
+    }
+
+    const accessToken = exchange.access_token || exchange.token || code;
+    const profile = await validateSculkToken(accessToken);
+
+    const sculkIdentity = {
+      id: String(profile?.id || profile?.sub || profile?.user_id || '').trim(),
+      name: profile?.name || profile?.username || 'Sculk User',
+      profile: profile || { name: 'Sculk User' },
+    };
+    const account = loadPassportAccounts().find((item) => (item.linkedSculkIds || []).includes(sculkIdentity.id) && item.status !== 'disabled');
+    if (!sculkIdentity.id || !account) {
+      res.status(409).json({
+        code: 'SCULK_NOT_LINKED',
+        message: 'Sculk ID не связан с .nedos Passport. Укажите существующую учетную запись NE-DOS или зарегистрируйте новую.',
+        sculkIdentity,
+      });
+      return;
+    }
+
+    const session = createPassportSession(account, 'sculk-code');
+    res.json({ session, profile: profile || { name: 'Sculk User' }, exchange, account: safeAccount(account) });
+    return;
+  }
+
+  res.status(400).json({ message: 'mode must be token or code' });
 });
 
 app.get('/api/meta', async (_req, res) => {
@@ -477,10 +844,10 @@ app.post('/api/commands/:slug/reviews', async (req, res) => {
   res.status(201).json(review);
 });
 
-app.post('/api/submissions', async (req, res) => {
+app.post('/api/submissions', requireRole(['uploader', 'moderator', 'admin'], 'Для загрузки команды нужна учетная запись .nedos Passport с ролью uploader/moderator/admin'), async (req, res) => {
   const { name, title, description, author, category, tags, version, scriptBody } = req.body || {};
-  if (!name || !description || !author || !category || !scriptBody) {
-    res.status(400).json({ message: 'name, description, author, category and scriptBody are required' });
+  if (!name || !description || !category || !scriptBody) {
+    res.status(400).json({ message: 'name, description, category and scriptBody are required' });
     return;
   }
   const slug = fileNameSafe(name);
@@ -500,7 +867,7 @@ app.post('/api/submissions', async (req, res) => {
     name: slug,
     title: String(title || commandTitle(slug)),
     description: String(description),
-    author: String(author),
+    author: String(author || req.passportAccount.displayName || req.passportAccount.username),
     category: String(category),
     tags: Array.isArray(tags) ? tags.map((item) => String(item)) : [],
     version: String(version || '1.0.0'),
@@ -517,7 +884,7 @@ app.post('/api/submissions', async (req, res) => {
   res.status(201).json(entry);
 });
 
-app.get('/api/admin/overview', adminOnly, async (_req, res) => {
+app.get('/api/admin/overview', requireRole(['moderator', 'admin'], 'Требуется роль модератора приложений или администратора'), async (_req, res) => {
   const commands = await loadAllCommandsAndMeta();
   const submissions = await loadSubmissions();
   const reviews = await loadReviews();
@@ -534,14 +901,14 @@ app.get('/api/admin/overview', adminOnly, async (_req, res) => {
   });
 });
 
-app.get('/api/admin/submissions', adminOnly, async (req, res) => {
+app.get('/api/admin/submissions', requireRole(['moderator', 'admin'], 'Требуется роль модератора приложений или администратора'), async (req, res) => {
   const status = req.query.status ? String(req.query.status) : '';
   const submissions = await loadSubmissions();
   const filtered = status ? submissions.filter((item) => item.status === status) : submissions;
   res.json({ items: filtered });
 });
 
-app.post('/api/admin/submissions/:id/approve', adminOnly, async (req, res) => {
+app.post('/api/admin/submissions/:id/approve', requireRole(['moderator', 'admin'], 'Требуется роль модератора приложений или администратора'), async (req, res) => {
   const current = (await loadSubmissions()).find((item) => item.id === req.params.id);
   if (!current) {
     res.status(404).json({ message: 'Submission not found' });
@@ -551,13 +918,21 @@ app.post('/api/admin/submissions/:id/approve', adminOnly, async (req, res) => {
     status: 'approved',
     moderationNote: String(req.body?.moderationNote || ''),
     reviewedAt: nowIso(),
-    reviewedBy: 'admin',
+    reviewedBy: req.passportAccount.username,
     sourceUrl: localPackageSource('submitted', current.slug),
+  });
+  appendModerationHistory({
+    actor: req.passportAccount.username,
+    actorRoles: req.passportAccount.roles,
+    action: 'approve',
+    submissionId: req.params.id,
+    slug: current.slug,
+    note: String(req.body?.moderationNote || ''),
   });
   res.json(updated);
 });
 
-app.post('/api/admin/submissions/:id/reject', adminOnly, async (req, res) => {
+app.post('/api/admin/submissions/:id/reject', requireRole(['moderator', 'admin'], 'Требуется роль модератора приложений или администратора'), async (req, res) => {
   const current = (await loadSubmissions()).find((item) => item.id === req.params.id);
   if (!current) {
     res.status(404).json({ message: 'Submission not found' });
@@ -567,13 +942,172 @@ app.post('/api/admin/submissions/:id/reject', adminOnly, async (req, res) => {
     status: 'rejected',
     moderationNote: String(req.body?.moderationNote || 'Rejected by moderator'),
     reviewedAt: nowIso(),
-    reviewedBy: 'admin',
+    reviewedBy: req.passportAccount.username,
+  });
+  appendModerationHistory({
+    actor: req.passportAccount.username,
+    actorRoles: req.passportAccount.roles,
+    action: 'reject',
+    submissionId: req.params.id,
+    slug: current.slug,
+    note: String(req.body?.moderationNote || 'Rejected by moderator'),
   });
   res.json(updated);
 });
 
+app.get('/api/admin/moderation-history', requireRole('admin', 'Требуется роль администратора'), (_req, res) => {
+  const rows = readJson(MODERATION_HISTORY_FILE, []);
+  res.json({ items: rows.slice().reverse() });
+});
+
+app.get('/api/admin/accounts', requireRole('admin', 'Требуется роль администратора'), (_req, res) => {
+  const items = loadPassportAccounts().map(safeAccount);
+  res.json({ items });
+});
+
+app.post('/api/admin/accounts', requireRole('admin', 'Требуется роль администратора'), (req, res) => {
+  const username = usernameSafe(req.body?.username);
+  const password = String(req.body?.password || '');
+  const displayName = String(req.body?.displayName || username || 'NE-DOS User').slice(0, 80);
+  const roles = Array.isArray(req.body?.roles) ? req.body.roles.map((item) => String(item)) : ['uploader'];
+
+  if (!username || !password) {
+    res.status(400).json({ message: 'username and password are required' });
+    return;
+  }
+
+  const accounts = loadPassportAccounts();
+  if (accounts.some((item) => item.username === username)) {
+    res.status(409).json({ message: 'Account already exists' });
+    return;
+  }
+
+  const entry = {
+    id: crypto.randomUUID(),
+    username,
+    displayName,
+    passwordHash: passwordHash(password),
+    roles: Array.from(new Set(roles)),
+    linkedSculkIds: [],
+    status: 'active',
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  };
+  accounts.push(entry);
+  savePassportAccounts(accounts);
+
+  appendModerationHistory({
+    actor: req.passportAccount.username,
+    actorRoles: req.passportAccount.roles,
+    action: 'account-create',
+    target: username,
+  });
+
+  res.status(201).json({ account: safeAccount(entry) });
+});
+
+app.patch('/api/admin/accounts/:username', requireRole('admin', 'Требуется роль администратора'), (req, res) => {
+  const target = usernameSafe(req.params.username);
+  const accounts = loadPassportAccounts();
+  const idx = accounts.findIndex((item) => item.username === target);
+  if (idx === -1) {
+    res.status(404).json({ message: 'Account not found' });
+    return;
+  }
+
+  const next = { ...accounts[idx] };
+  if (req.body?.displayName) next.displayName = String(req.body.displayName).slice(0, 80);
+  if (Array.isArray(req.body?.roles)) next.roles = Array.from(new Set(req.body.roles.map((item) => String(item))));
+  if (req.body?.status) next.status = String(req.body.status);
+  if (req.body?.password) next.passwordHash = passwordHash(String(req.body.password));
+  next.updatedAt = nowIso();
+  accounts[idx] = next;
+  savePassportAccounts(accounts);
+
+  appendModerationHistory({
+    actor: req.passportAccount.username,
+    actorRoles: req.passportAccount.roles,
+    action: 'account-update',
+    target,
+  });
+
+  res.json({ account: safeAccount(next) });
+});
+
+app.delete('/api/admin/accounts/:username', requireRole('admin', 'Требуется роль администратора'), (req, res) => {
+  const target = usernameSafe(req.params.username);
+  const accounts = loadPassportAccounts();
+  const idx = accounts.findIndex((item) => item.username === target);
+  if (idx === -1) {
+    res.status(404).json({ message: 'Account not found' });
+    return;
+  }
+  const [removed] = accounts.splice(idx, 1);
+  savePassportAccounts(accounts);
+
+  appendModerationHistory({
+    actor: req.passportAccount.username,
+    actorRoles: req.passportAccount.roles,
+    action: 'account-delete',
+    target,
+  });
+
+  res.json({ deleted: safeAccount(removed) });
+});
+
+app.get('/api/admin/apps', requireRole('admin', 'Требуется роль администратора'), async (_req, res) => {
+  const items = await loadAllCommandsAndMeta();
+  res.json({ items });
+});
+
+app.post('/api/admin/apps', requireRole('admin', 'Требуется роль администратора'), (req, res) => {
+  const { slug, title, description, category, tags, scriptBody } = req.body || {};
+  const safeSlug = fileNameSafe(slug);
+  if (!safeSlug || !description || !category || !scriptBody) {
+    res.status(400).json({ message: 'slug, description, category and scriptBody are required' });
+    return;
+  }
+  const registry = readJson(COMMUNITY_REGISTRY_FILE, []);
+  if (registry.some((item) => item.slug === safeSlug)) {
+    res.status(409).json({ message: 'App slug already exists' });
+    return;
+  }
+  const scriptPath = path.join(COMMUNITY_DIR, `${safeSlug}.js`);
+  fs.writeFileSync(scriptPath, String(scriptBody));
+
+  const entry = {
+    slug: safeSlug,
+    name: safeSlug,
+    title: String(title || commandTitle(safeSlug)),
+    description: String(description),
+    author: '.nedos Passport Admin',
+    category: String(category),
+    tags: Array.isArray(tags) ? tags.map((item) => String(item)) : [],
+    version: '1.0.0',
+    sourceUrl: localPackageSource('community', safeSlug),
+    sha256: sha256FromText(String(scriptBody)),
+    downloads: 0,
+    rating: 0,
+    verified: true,
+    origin: 'community',
+    status: 'approved',
+    hidden: false,
+  };
+  registry.push(entry);
+  writeJson(COMMUNITY_REGISTRY_FILE, registry);
+
+  appendModerationHistory({
+    actor: req.passportAccount.username,
+    actorRoles: req.passportAccount.roles,
+    action: 'app-create',
+    slug: safeSlug,
+  });
+
+  res.status(201).json(entry);
+});
+
 app.patch('/api/admin/commands/:slug', adminOnly, async (req, res) => {
-  const { verified, category, tags } = req.body || {};
+  const { verified, category, tags, hidden } = req.body || {};
   const community = readJson(COMMUNITY_REGISTRY_FILE, []);
   const idx = community.findIndex((item) => item.slug === req.params.slug);
   if (idx === -1) {
@@ -584,9 +1118,55 @@ app.patch('/api/admin/commands/:slug', adminOnly, async (req, res) => {
   if (verified !== undefined) next.verified = Boolean(verified);
   if (category) next.category = String(category);
   if (Array.isArray(tags)) next.tags = tags.map((item) => String(item));
+  if (hidden !== undefined) next.hidden = Boolean(hidden);
   community[idx] = next;
   writeJson(COMMUNITY_REGISTRY_FILE, community);
+
+  if (req.passportAccount) {
+    appendModerationHistory({
+      actor: req.passportAccount.username,
+      actorRoles: req.passportAccount.roles,
+      action: 'app-update',
+      slug: req.params.slug,
+    });
+  }
+
   res.json(next);
+});
+
+app.delete('/api/admin/apps/:slug', requireRole('admin', 'Требуется роль администратора'), (req, res) => {
+  const slug = fileNameSafe(req.params.slug);
+  const registry = readJson(COMMUNITY_REGISTRY_FILE, []);
+  const idx = registry.findIndex((item) => item.slug === slug);
+  if (idx === -1) {
+    res.status(404).json({ message: 'App not found' });
+    return;
+  }
+
+  const [removed] = registry.splice(idx, 1);
+  writeJson(COMMUNITY_REGISTRY_FILE, registry);
+  const scriptPath = path.join(COMMUNITY_DIR, `${slug}.js`);
+  if (fs.existsSync(scriptPath)) fs.unlinkSync(scriptPath);
+
+  appendModerationHistory({
+    actor: req.passportAccount.username,
+    actorRoles: req.passportAccount.roles,
+    action: 'app-delete',
+    slug,
+  });
+
+  res.json({ deleted: removed });
+});
+
+app.get('/api/packages/core/:group/:file', (req, res) => {
+  const slug = String(req.params.file || '').replace(/\.js$/, '');
+  const filePath = packageFilePath('core', slug);
+  if (!filePath || !fs.existsSync(filePath)) {
+    res.status(404).json({ message: 'Package file not found' });
+    return;
+  }
+  res.type('application/javascript');
+  res.send(fs.readFileSync(filePath, 'utf8'));
 });
 
 app.get('/api/packages/:scope/:file', (req, res) => {
@@ -621,6 +1201,7 @@ initDb()
     console.error('[store] database init failed:', error.message);
   })
   .finally(() => {
+    ensureBootstrapAdmin();
     app.listen(PORT, () => {
       console.log(`[store] API listening at http://localhost:${PORT}`);
     });

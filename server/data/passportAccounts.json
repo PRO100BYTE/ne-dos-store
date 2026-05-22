@@ -1,0 +1,43 @@
+[
+  {
+    "id": "1dd0e27e-610d-4583-8f54-e6c567c0532a",
+    "username": "admin",
+    "displayName": ".nedos Passport Admin",
+    "passwordHash": "9669c0b12ae14f13437f5946cfa19dbb517d6a2d2a503db01600309600bbc506",
+    "roles": [
+      "uploader",
+      "moderator",
+      "admin"
+    ],
+    "linkedSculkIds": [],
+    "status": "active",
+    "createdAt": "2026-05-22T02:53:40.500Z",
+    "updatedAt": "2026-05-22T02:53:40.502Z"
+  },
+  {
+    "id": "18c3b6a3-d4b2-4112-856b-f4135e4d0396",
+    "username": "ci-user-1779418432190",
+    "displayName": "CI Uploader",
+    "passwordHash": "7fce4b5eb5f55a60711d4222f88872fe51372a508b9ea0e953f9a1bf8d8ba411",
+    "roles": [
+      "uploader"
+    ],
+    "linkedSculkIds": [],
+    "status": "active",
+    "createdAt": "2026-05-22T02:53:52.214Z",
+    "updatedAt": "2026-05-22T02:53:52.214Z"
+  },
+  {
+    "id": "50969a09-fd96-4c99-8a37-3f174d3de8d1",
+    "username": "ci-user-1779418489323",
+    "displayName": "CI Uploader",
+    "passwordHash": "7fce4b5eb5f55a60711d4222f88872fe51372a508b9ea0e953f9a1bf8d8ba411",
+    "roles": [
+      "uploader"
+    ],
+    "linkedSculkIds": [],
+    "status": "active",
+    "createdAt": "2026-05-22T02:54:49.328Z",
+    "updatedAt": "2026-05-22T02:54:49.328Z"
+  }
+]

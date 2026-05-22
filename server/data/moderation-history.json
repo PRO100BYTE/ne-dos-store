@@ -1,0 +1,16 @@
+[
+  {
+    "id": "174bc807-4d7e-4299-8cde-f0b4e465637d",
+    "createdAt": "2026-05-22T02:54:49.368Z",
+    "actor": "admin",
+    "actorRoles": [
+      "uploader",
+      "moderator",
+      "admin"
+    ],
+    "action": "approve",
+    "submissionId": "c7be121d-fbb9-41f9-8a8e-e83b300b42f6",
+    "slug": "ci-cmd-1779418489355",
+    "note": "Approved in CI"
+  }
+]

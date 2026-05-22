@@ -2,20 +2,50 @@ import React, { useCallback, useEffect, useState } from 'react';
 import './AdminPanel.css';
 
 function AdminPanel() {
-  const [token, setToken] = useState(localStorage.getItem('nedos-store-admin-token') || '');
+  const [mode, setMode] = useState('token');
+  const [authValue, setAuthValue] = useState('');
+  const [sculkConfig, setSculkConfig] = useState(null);
+  const [session, setSession] = useState(localStorage.getItem('nedos-store-passport-session') || '');
+  const [profile, setProfile] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('nedos-store-passport-account') || 'null');
+    } catch {
+      return null;
+    }
+  });
   const [overview, setOverview] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [status, setStatus] = useState('pending');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const authHeaders = useCallback(() => {
+    const headers = { 'Content-Type': 'application/json' };
+    if (session) headers['x-nedos-session'] = session;
+    return headers;
+  }, [session]);
+
+  const refreshConfig = useCallback(async () => {
+    const res = await fetch('/api/auth/sculk/config');
+    const data = await res.json();
+    if (res.ok) {
+      setSculkConfig(data);
+    }
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    setSession('');
+    setProfile(null);
+    localStorage.removeItem('nedos-store-passport-session');
+    localStorage.removeItem('nedos-store-passport-account');
+  }, []);
+
   const load = useCallback(async () => {
-    if (!token) return;
-    const headers = { 'x-admin-token': token, 'Content-Type': 'application/json' };
+    if (!session) return;
+    const headers = authHeaders();
     setLoading(true);
     setError('');
     try {
-      localStorage.setItem('nedos-store-admin-token', token);
       const [overviewRes, submissionsRes] = await Promise.all([
         fetch('/api/admin/overview', { headers }),
         fetch(`/api/admin/submissions?status=${status}`, { headers }),
@@ -28,10 +58,46 @@ function AdminPanel() {
       setSubmissions(submissionsData.items || []);
     } catch (err) {
       setError(err.message);
+      if (/auth|required|session/i.test(err.message)) {
+        handleLogout();
+      }
     } finally {
       setLoading(false);
     }
-  }, [status, token]);
+  }, [authHeaders, handleLogout, session, status]);
+
+  const login = useCallback(async () => {
+    if (!authValue.trim()) {
+      setError('Введите Sculk token или grant code');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/auth/sculk/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode, [mode === 'token' ? 'token' : 'code']: authValue.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Sculk login failed');
+
+      setSession(data.session);
+      setProfile(data.account || null);
+      localStorage.setItem('nedos-store-passport-session', data.session);
+      localStorage.setItem('nedos-store-passport-account', JSON.stringify(data.account || null));
+      setAuthValue('');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [authValue, mode]);
+
+  useEffect(() => {
+    refreshConfig();
+  }, [refreshConfig]);
 
   useEffect(() => {
     load();
@@ -40,7 +106,7 @@ function AdminPanel() {
   const moderate = async (id, action) => {
     const note = window.prompt('Комментарий модератора:', action === 'reject' ? 'Причина отклонения' : 'Approved');
     try {
-      const headers = { 'x-admin-token': token, 'Content-Type': 'application/json' };
+      const headers = authHeaders();
       const res = await fetch(`/api/admin/submissions/${id}/${action}`, {
         method: 'POST',
         headers,
@@ -54,16 +120,35 @@ function AdminPanel() {
     }
   };
 
+  const authorizeLink = sculkConfig?.authorizeUrl || 'https://my.sculk.ltd/api/sso/authorize';
+  const callbackUrl = sculkConfig?.callbackUrl || 'http://localhost:8787/api/auth/sculk/callback';
+
   return (
     <section className="admin-section">
       <div className="admin-head">
         <h2>Админка магазина</h2>
-        <p>Модерация новых команд, обзор каталога и управление очередью публикации.</p>
+        <p>Модерация новых команд и управление публикацией через .nedos Passport (Sculk ID + связанный аккаунт).</p>
       </div>
 
       <div className="admin-auth">
-        <input value={token} onChange={(e) => setToken(e.target.value)} placeholder="Admin token" />
-        <button onClick={load}>Подключиться</button>
+        <select value={mode} onChange={(e) => setMode(e.target.value)}>
+          <option value="token">Sculk token</option>
+          <option value="code">Grant code</option>
+        </select>
+        <input
+          value={authValue}
+          onChange={(e) => setAuthValue(e.target.value)}
+          placeholder={mode === 'token' ? 'Sculk access token' : 'Authorization code'}
+        />
+        <button onClick={login}>Войти</button>
+        <button onClick={handleLogout} type="button">Выйти</button>
+      </div>
+
+      <div className="admin-sculk">
+        <span>Authorize:</span>
+        <a href={authorizeLink} target="_blank" rel="noreferrer">{authorizeLink}</a>
+        <span>Callback: {callbackUrl}</span>
+        {profile && <strong>{profile.displayName || profile.username || 'NE-DOS User'}</strong>}
       </div>
 
       {error && <div className="admin-error">{error}</div>}
@@ -86,6 +171,7 @@ function AdminPanel() {
       </div>
 
       {loading && <div className="admin-state">Загрузка админки...</div>}
+      {!session && <div className="admin-state">Требуется вход через .nedos Passport (роль admin).</div>}
 
       <div className="admin-list">
         {submissions.map((item) => (
