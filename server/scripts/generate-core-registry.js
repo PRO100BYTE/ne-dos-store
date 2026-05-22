@@ -5,6 +5,7 @@ const { execSync } = require('child_process');
 
 const branch = process.env.NE_DOS_BRANCH || 'big-reload-1.3.0';
 const repo = process.env.NE_DOS_REPO || path.resolve(__dirname, '..', '..', '..', 'ne-dos');
+const corePackagesDir = path.resolve(__dirname, '..', 'packages', 'core');
 const outFile = path.resolve(__dirname, '..', 'data', 'coreCommands.generated.json');
 
 const overrides = {
@@ -128,6 +129,7 @@ const registry = fileList.map((filePath, index) => {
   const fileName = parts[3].replace(/\.js$/, '');
   const category = categoryMap[group] || 'community';
   const source = execSync(`git -C "${repo}" show ${branch}:${filePath}`, { encoding: 'utf8', maxBuffer: 1024 * 1024 * 4 });
+  const localPackagePath = path.join(corePackagesDir, filePath);
   const sha256 = crypto.createHash('sha256').update(source, 'utf8').digest('hex');
 
   return {
@@ -139,7 +141,9 @@ const registry = fileList.map((filePath, index) => {
     author: 'NE-DOS Core',
     category,
     tags: [...new Set([...(tagsByCategory[category] || []), group.toLowerCase()])],
-    sourceUrl: `https://raw.githubusercontent.com/PRO100BYTE/ne-dos/${branch}/${filePath}`,
+    sourceUrl: `/api/packages/core/${group}/${fileName}.js`,
+    canonicalSourceUrl: `https://raw.githubusercontent.com/PRO100BYTE/ne-dos/${branch}/${filePath}`,
+    packagePath: filePath,
     sha256,
     downloads: 10000 - index * 71 > 0 ? 10000 - index * 71 : 500,
     rating: Number((4.2 + ((index % 8) * 0.1)).toFixed(1)),
