@@ -7,7 +7,9 @@ function AuthPage({ onAuthSuccess, account, onLogout }) {
   const [isRegister, setIsRegister] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState(null);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -16,11 +18,28 @@ function AuthPage({ onAuthSuccess, account, onLogout }) {
     e.preventDefault();
     setAuthError(null);
     setMessage('');
+    
+    // Валидация
+    if (isRegister) {
+      if (password !== passwordConfirm) {
+        setAuthError({ status: 400, message: 'Пароли не совпадают' });
+        return;
+      }
+      if (password.length < 8) {
+        setAuthError({ status: 400, message: 'Пароль должен быть не менее 8 символов' });
+        return;
+      }
+      if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+        setAuthError({ status: 400, message: 'Пароль должен содержать буквы (верхний/нижний регистр) и цифры' });
+        return;
+      }
+    }
+    
     setLoading(true);
     try {
       const url = isRegister ? '/api/auth/passport/register' : '/api/auth/passport/login';
       const body = isRegister 
-        ? { username, password, displayName }
+        ? { username, password, passwordConfirm, displayName }
         : { username, password };
       
       const res = await fetch(url, {
@@ -133,21 +152,54 @@ function AuthPage({ onAuthSuccess, account, onLogout }) {
                   placeholder="Username"
                   required
                 />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Пароль"
-                  required
-                />
-                {isRegister && (
+                <div className="password-field">
                   <input
-                    type="text"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="Ваше имя"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Пароль"
                     required
                   />
+                  <button
+                    type="button"
+                    className="btn-show-password"
+                    onClick={() => setShowPassword(!showPassword)}
+                    title={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                  >
+                    {showPassword ? '👁️‍🗨️' : '👁️'}
+                  </button>
+                </div>
+                {isRegister && (
+                  <>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={passwordConfirm}
+                      onChange={(e) => setPasswordConfirm(e.target.value)}
+                      placeholder="Подтвердить пароль"
+                      required
+                    />
+                    <input
+                      type="text"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      placeholder="Ваше имя"
+                      required
+                    />
+                    <div className="password-strength">
+                      <div className="strength-label">Сложность пароля:</div>
+                      <div className="strength-bar">
+                        <div
+                          className={`strength-fill ${
+                            password.length >= 8 && /[a-z]/.test(password) && /[A-Z]/.test(password) && /[0-9]/.test(password)
+                              ? 'strong'
+                              : password.length >= 6
+                              ? 'medium'
+                              : 'weak'
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
 

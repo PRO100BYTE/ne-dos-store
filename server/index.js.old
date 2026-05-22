@@ -894,37 +894,6 @@ app.post('/api/commands/:slug/reviews', async (req, res) => {
   res.status(201).json(review);
 });
 
-app.get('/api/commands/:slug/source', async (req, res) => {
-  const commands = await loadAllCommandsAndMeta();
-  const command = commands.find((item) => item.slug === req.params.slug);
-  if (!command) {
-    res.status(404).json({ message: 'Command not found' });
-    return;
-  }
-
-  let filePath = null;
-  if (command.origin === 'core') {
-    const coreCommands = readJson(CORE_REGISTRY_FILE, []);
-    const coreCmd = coreCommands.find((item) => item.slug === command.slug);
-    if (coreCmd && coreCmd.packagePath) {
-      filePath = path.join(__dirname, 'packages', 'core', coreCmd.packagePath);
-    }
-  } else if (command.origin === 'community') {
-    filePath = path.join(COMMUNITY_DIR, `${command.slug}.js`);
-  } else if (command.origin === 'submitted') {
-    filePath = path.join(SUBMITTED_DIR, `${command.slug}.js`);
-  }
-
-  if (!filePath || !fs.existsSync(filePath)) {
-    res.status(404).json({ message: 'Source file not found' });
-    return;
-  }
-
-  res.type('application/javascript');
-  res.set('Content-Disposition', `attachment; filename="${command.slug}.js"`);
-  res.send(fs.readFileSync(filePath, 'utf8'));
-});
-
 app.post('/api/submissions', requireRole(['uploader', ROLE_APP_MODERATOR, ROLE_ADMINISTRATOR], 'Для загрузки команды нужна учетная запись .nedos Passport с ролью uploader/ApplicationModerator/Administrator'), async (req, res) => {
   const { name, title, description, author, category, tags, version, scriptBody } = req.body || {};
   if (!name || !description || !category || !scriptBody) {

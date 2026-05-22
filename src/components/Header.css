@@ -29,6 +29,45 @@
   line-height: 1.1;
 }
 
+.logo-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  transition: all 0.2s ease;
+}
+
+.logo-link:hover {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+.logo-link:active {
+  transform: scale(0.95);
+}
+
+.logo-link img {
+  width: 42px;
+  height: 42px;
+}
+
+.logo-link > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.logo-link span {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
 .subtitle {
   color: #9bc9b0;
   font-size: 12px;

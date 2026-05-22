@@ -16,6 +16,11 @@ function App() {
     if (path.startsWith('/auth')) return 'auth';
     if (path.startsWith('/status')) return 'status';
     if (path.startsWith('/admin')) return 'admin';
+    // Redirect invalid paths to catalog
+    if (path !== '/' && path !== '') {
+      window.history.replaceState({}, '', '/');
+      return 'catalog';
+    }
     return 'catalog';
   });
   const [session, setSession] = useState(localStorage.getItem('nedos-store-passport-session') || '');

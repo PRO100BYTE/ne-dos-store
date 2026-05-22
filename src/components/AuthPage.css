@@ -308,6 +308,79 @@
   color: #ff9966;
 }
 
+.password-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-field input {
+  width: 100%;
+}
+
+.btn-show-password {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 4px 8px;
+  color: #7fb39f;
+  transition: all 0.2s ease;
+  opacity: 0.7;
+}
+
+.btn-show-password:hover {
+  color: #86ffb5;
+  opacity: 1;
+}
+
+.password-strength {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.strength-label {
+  font-size: 12px;
+  color: #7fb39f;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.strength-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(20, 40, 30, 0.5);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid #284534;
+}
+
+.strength-fill {
+  height: 100%;
+  width: 0%;
+  transition: all 0.3s ease;
+  border-radius: 3px;
+}
+
+.strength-fill.weak {
+  width: 33%;
+  background: linear-gradient(90deg, #ff6b6b, #ff8787);
+}
+
+.strength-fill.medium {
+  width: 66%;
+  background: linear-gradient(90deg, #ffd93d, #ffed4e);
+}
+
+.strength-fill.strong {
+  width: 100%;
+  background: linear-gradient(90deg, #86ffb5, #5ae391);
+}
+
 @media (max-width: 600px) {
   .auth-page {
     padding: 20px 16px;

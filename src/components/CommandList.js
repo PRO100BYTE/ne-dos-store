@@ -162,7 +162,7 @@ function CommandList() {
 
                                 <div className="install-actions">
                                     <button onClick={() => handleInstall(command.slug)}>Установить</button>
-                                    <a href={command.sourceUrl} target="_blank" rel="noreferrer">Исходник</a>
+                                    <a href={`/api/commands/${command.slug}/source`} target="_blank" rel="noreferrer" title="Открыть исходный код команды">Исходник</a>
                                 </div>
 
                                 <code>store install {command.slug}</code>

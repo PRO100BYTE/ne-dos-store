@@ -12,5 +12,12 @@
     "origin": "core",
     "installerFingerprint": "::1",
     "createdAt": "2026-05-22T03:25:18.324Z"
+  },
+  {
+    "id": "812aa631-e330-4451-8569-0653b0c7952c",
+    "commandSlug": "lorem",
+    "origin": "community",
+    "installerFingerprint": "::1",
+    "createdAt": "2026-05-22T03:49:59.322Z"
   }
 ]
