@@ -1,0 +1,44 @@
+name: Integration
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build frontend for static serving
+        run: npm run build:frontend
+      - name: Start store backend
+        env:
+          ADMIN_TOKEN: ne-dos-admin-dev-token
+        run: |
+          npm run start:prod &
+          echo $! > server.pid
+      - name: Wait for health endpoint
+        run: |
+          for i in {1..30}; do
+            curl -fsS http://localhost:8787/api/health && exit 0
+            sleep 2
+          done
+          echo "Server did not start in time"
+          exit 1
+      - name: Run integration checks
+        env:
+          ADMIN_TOKEN: ne-dos-admin-dev-token
+          STORE_BASE_URL: http://localhost:8787
+        run: npm run test:integration
+      - name: Stop backend
+        if: always()
+        run: |
+          kill $(cat server.pid) || true

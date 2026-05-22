@@ -1,0 +1,76 @@
+.submission-section {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.submission-head h2 {
+  margin: 0 0 8px;
+}
+
+.submission-head p {
+  color: #9ec2b0;
+  margin-bottom: 18px;
+}
+
+.submission-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: linear-gradient(180deg, rgba(13, 29, 22, 0.96), rgba(7, 18, 14, 0.95));
+  border: 1px solid #244c37;
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.submission-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.submission-form input,
+.submission-form textarea {
+  width: 100%;
+  background: #0b1310;
+  color: #d6ffe7;
+  border: 1px solid #284534;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.code-area {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.submission-form button {
+  align-self: flex-start;
+  border: 1px solid #2f6147;
+  background: #12231a;
+  color: #c7ffe0;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.submit-result {
+  margin-top: 14px;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.submit-result.ok {
+  border: 1px solid #3b7e58;
+  background: rgba(16, 65, 36, 0.35);
+}
+
+.submit-result.fail {
+  border: 1px solid #8a4141;
+  background: rgba(90, 20, 20, 0.28);
+}
+
+@media (max-width: 900px) {
+  .submission-grid {
+    grid-template-columns: 1fr;
+  }
+}

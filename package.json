@@ -13,6 +13,7 @@
     "font-awesome": "^4.7.0",
     "helmet": "^8.1.0",
     "morgan": "^1.10.1",
+    "pg": "^8.21.0",
     "react": "^18.2.0",
     "react-bootstrap": "^2.8.0",
     "react-dom": "^18.2.0",
@@ -25,9 +26,13 @@
   "scripts": {
     "start": "react-scripts start",
     "server": "node server/index.js",
+    "start:prod": "node server/index.js",
     "dev": "concurrently \"npm run server\" \"npm run start\"",
     "build": "react-scripts build",
+    "build:frontend": "react-scripts build",
     "test": "react-scripts test",
+    "test:ci": "react-scripts test --watch=false",
+    "test:integration": "node server/scripts/integration-check.js",
     "eject": "react-scripts eject"
   },
   "proxy": "http://localhost:8787",

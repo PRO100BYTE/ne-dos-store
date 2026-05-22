@@ -38,6 +38,26 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
+}
+
+.nav-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.nav-btn {
+  border: 1px solid #2f6147;
+  background: #12231a;
+  color: #c7ffe0;
+  border-radius: 10px;
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
+.nav-btn.active {
+  border-color: #7fd6a0;
+  box-shadow: 0 0 0 1px rgba(127, 214, 160, 0.2) inset;
 }
 
 .status {

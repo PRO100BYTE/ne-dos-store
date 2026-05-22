@@ -2,9 +2,12 @@ import React, { useEffect, useState } from 'react';
 import './App.css';
 import Header from './components/Header';
 import CommandList from './components/CommandList';
+import SubmissionForm from './components/SubmissionForm';
+import AdminPanel from './components/AdminPanel';
 
 function App() {
   const [apiOnline, setApiOnline] = useState(false);
+  const [view, setView] = useState('catalog');
 
   useEffect(() => {
     let mounted = true;
@@ -17,8 +20,10 @@ function App() {
 
   return (
     <div className="App">
-      <Header apiOnline={apiOnline} />
-      <CommandList />
+      <Header apiOnline={apiOnline} view={view} onNavigate={setView} />
+      {view === 'catalog' && <CommandList />}
+      {view === 'submit' && <SubmissionForm />}
+      {view === 'admin' && <AdminPanel />}
       <footer className="footer">
         <img src="/images/team.png" alt="PRO100BYTE logo" />
         <span>© 2026 NE-DOS Store by PRO100BYTE Team</span>

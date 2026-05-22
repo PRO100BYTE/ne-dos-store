@@ -1,0 +1,33 @@
+name: Deploy Store
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  docker-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push store image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/ne-dos-store:latest
+            ghcr.io/${{ github.repository_owner }}/ne-dos-store:${{ github.sha }}
+      - name: Upload deployment hint
+        run: |
+          echo "Image pushed: ghcr.io/${{ github.repository_owner }}/ne-dos-store:latest"

@@ -6,6 +6,7 @@ function CommandList() {
     const [meta, setMeta] = useState({ categories: [], tags: [], count: 0 });
     const [query, setQuery] = useState('');
     const [category, setCategory] = useState('');
+    const [origin, setOrigin] = useState('');
     const [sort, setSort] = useState('downloads');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -15,9 +16,10 @@ function CommandList() {
         const params = new URLSearchParams();
         if (query.trim()) params.set('query', query.trim());
         if (category) params.set('category', category);
+        if (origin) params.set('origin', origin);
         params.set('sort', sort);
         return params.toString();
-    }, [query, category, sort]);
+    }, [query, category, origin, sort]);
 
     useEffect(() => {
         let mounted = true;
@@ -81,11 +83,18 @@ function CommandList() {
                         <option key={item} value={item}>{item}</option>
                     ))}
                 </select>
+                <select value={origin} onChange={(e) => setOrigin(e.target.value)}>
+                    <option value="">Все источники</option>
+                    {(meta.origins || []).map((item) => (
+                        <option key={item} value={item}>{item}</option>
+                    ))}
+                </select>
                 <select value={sort} onChange={(e) => setSort(e.target.value)}>
                     <option value="downloads">Сначала популярные</option>
                     <option value="rating">Сначала рейтинг</option>
                     <option value="newest">Сначала новые версии</option>
                     <option value="name">По имени</option>
+                    <option value="origin">По источнику</option>
                 </select>
             </div>
 
@@ -112,6 +121,7 @@ function CommandList() {
                                     <span>v{command.version}</span>
                                     <span>⭐ {command.rating}</span>
                                     <span>⬇ {command.downloads.toLocaleString('ru-RU')}</span>
+                                    <span>origin: {command.origin}</span>
                                 </div>
                                 <div className="tags">
                                     {(command.tags || []).map((tag) => (
@@ -130,6 +140,10 @@ function CommandList() {
                                     <div className="hint-box">
                                         <div>Команда:</div>
                                         <code>{hint.installSnippet}</code>
+                                        <div>SHA-256:</div>
+                                        <code>{hint.sha256 || 'not available'}</code>
+                                        <div>Verification:</div>
+                                        <code>{hint.verification || 'unknown'}</code>
                                         <div>Manual fallback:</div>
                                         <code>{hint.manualSnippet}</code>
                                     </div>
