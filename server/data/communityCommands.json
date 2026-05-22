@@ -158,5 +158,21 @@
     "verified": true,
     "origin": "community",
     "status": "approved"
+  },
+  {
+    "slug": "sculk",
+    "name": "sculk",
+    "title": "Sculk API",
+    "description": "Авторизация через Sculk ID и работа с Sculk API/.nedos Passport.",
+    "version": "1.0.0",
+    "author": "PRO100BYTE Team",
+    "category": "api",
+    "tags": ["community", "sculk", "passport", "api"],
+    "sourceUrl": "/api/packages/community/sculk.js",
+    "downloads": 320,
+    "rating": 4.8,
+    "verified": true,
+    "origin": "community",
+    "status": "approved"
   }
 ]
