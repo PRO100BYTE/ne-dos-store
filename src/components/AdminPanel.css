@@ -256,3 +256,46 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #86ffb5;
+  cursor: pointer;
+  text-decoration: underline;
+  font-weight: 600;
+  padding: 0;
+  transition: all 0.2s ease;
+}
+
+.link-btn:hover {
+  color: #5ae391;
+  opacity: 0.8;
+}
+
+.admin-denied-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.admin-denied-actions button {
+  background: linear-gradient(135deg, #2d6d47 0%, #1f4930 100%);
+  border: 2px solid #86ffb5;
+  color: #86ffb5;
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.admin-denied-actions button:hover {
+  background: linear-gradient(135deg, #3a7d54 0%, #275c39 100%);
+  box-shadow: 0 0 20px rgba(134, 255, 181, 0.3);
+  transform: translateY(-2px);
+}

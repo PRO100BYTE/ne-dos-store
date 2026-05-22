@@ -126,7 +126,7 @@ function App() {
           {view === 'submit' && <SubmissionForm account={account} session={session} onOpenAuth={() => navigate('auth')} />}
           {view === 'status' && <ApiStatusPage />}
           {view === 'auth' && <AuthPage onAuthSuccess={saveSession} account={account} onLogout={logout} />}
-          {view === 'admin' && <AdminPanel account={account} session={session} onOpenAuth={() => navigate('auth')} onGoHome={() => navigate('catalog')} onLogout={logout} />}
+          {view === 'admin' && <AdminPanel account={account} session={session} onNavigate={navigate} onLogout={logout} />}
         </>
       )}
       <footer className="footer">
