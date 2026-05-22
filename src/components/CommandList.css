@@ -1,34 +1,167 @@
-.CommandList {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); /* Изменить эту строку */
-  grid-gap: 20px;
-  padding: 30px;
-}
-
-.command {
-  border: 2px solid white;
-  border-radius: 10px;
+.store-section {
+  max-width: 1240px;
+  margin: 0 auto;
   padding: 20px;
 }
 
+.toolbar {
+  display: grid;
+  grid-template-columns: 1fr 220px 220px;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.toolbar input,
+.toolbar select {
+  background: #0b1310;
+  color: #d6ffe7;
+  border: 1px solid #284534;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  color: #97b8a5;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.state-box {
+  border: 1px dashed #3f654d;
+  border-radius: 12px;
+  padding: 18px;
+  color: #b2d7bf;
+}
+
+.state-box.error {
+  border-color: #7a3b3b;
+  color: #ffb0b0;
+}
+
+.CommandList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.command {
+  border: 1px solid #244c37;
+  border-radius: 14px;
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(13, 29, 22, 0.96), rgba(7, 18, 14, 0.95));
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+}
+
+.top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
 .command h3 {
+  margin: 0;
   font-size: 20px;
-  font-weight: bold;
+  color: #f0fff6;
 }
 
 .command p {
-  font-size: 16px;
+  margin: 10px 0;
+  min-height: 42px;
+  color: #bad4c5;
+  font-size: 14px;
+}
+
+.stats {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  color: #95c5aa;
+  margin-bottom: 10px;
+}
+
+.tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.badge {
+  display: inline-flex;
+  border: 1px solid #365c47;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  color: #a8dfbf;
+}
+
+.badge.verified {
+  border-color: #2d7eff;
+  color: #c6deff;
+  background: rgba(31, 105, 255, 0.17);
+}
+
+.install-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.install-actions button,
+.install-actions a {
+  border: 1px solid #2f6147;
+  background: #12231a;
+  color: #c7ffe0;
+  border-radius: 10px;
+  padding: 7px 10px;
+  font-size: 12px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.install-actions button:hover,
+.install-actions a:hover {
+  border-color: #63d090;
 }
 
 .command code {
-  font-size: 14px;
-  font-family: monospace;
-  color: #00ff00;
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #86ffb5;
+  background: #0b1510;
+  border: 1px solid #1f3f2f;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 12px;
 }
 
-@media (max-width: 600px) { /* Добавить этот медиа-запрос */
-  .CommandList {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Изменить значение minmax */
+.hint-box {
+  margin-top: 10px;
+  border: 1px dashed #3d6a52;
+  border-radius: 10px;
+  padding: 8px;
+  color: #b6d5c4;
+  font-size: 12px;
+}
+
+.hint-box.error {
+  border-color: #8a4141;
+  color: #ffb7b7;
+}
+
+@media (max-width: 860px) {
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .meta-row {
+    flex-direction: column;
+    gap: 4px;
   }
 }
 

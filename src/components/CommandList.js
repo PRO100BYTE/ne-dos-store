@@ -1,82 +1,147 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import './CommandList.css';
 
 function CommandList() {
-  // Массив с данными о дополнениях (командах)
-  const commands = [
-    {
-        name: 'calc',
-        description: 'Калькулятор, позволяющий выполнять арифметические операции'
-    },
-    {
-        name: 'clock',
-        description: 'Часы, показывающие текущее время и дату'
-    },
-    {
-        name: 'snake',
-        description: 'Классическая игра Змейка, в которой нужно собирать еду и не врезаться в стены или хвост'
-    },
-    {
-        name: 'chat',
-        description: 'Чат, позволяющий общаться с другими пользователями NE-DOS'
-    },
-    {
-        name: 'paint',
-        description: 'Графический редактор, позволяющий рисовать и сохранять изображения'
-    },
-    {
-        name: 'music',
-        description: 'Музыкальный плеер, позволяющий воспроизводить и загружать музыкальные файлы'
-    },
-    {
-        name: 'browser',
-        description: 'Веб-браузер, позволяющий просматривать веб-страницы в интернете'
-    },
-    {
-        name: 'todo',
-        description: 'Список дел, позволяющий добавлять, удалять и отмечать задачи'
-    },
-    {
-        name: 'weather',
-        description: 'Погода, показывающая текущую температуру, влажность и прогноз на ближайшие дни'
-    },
-    {
-        name: 'quiz',
-        description: 'Викторина, в которой нужно отвечать на вопросы по разным темам'
-    },
-    {
-        name: 'www',
-        description: 'Открывает ссылку в новой вкладке'
-    },
-    {
-        name: 'github',
-        description: 'Открывает репозиторий проекта на GitHub'
-    },
-    {
-        name: 'command',
-        description: 'Здесь должно быть описание команды'
-    },
-    {
-        name: 'confetti',
-        description: 'Здесь должно быть описание команды'
-    },
-    {
-        name: 'reboot',
-        description: 'Здесь должно быть описание команды'
-    }
-    
-  ];
+    const [commands, setCommands] = useState([]);
+    const [meta, setMeta] = useState({ categories: [], tags: [], count: 0 });
+    const [query, setQuery] = useState('');
+    const [category, setCategory] = useState('');
+    const [sort, setSort] = useState('downloads');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [installHints, setInstallHints] = useState({});
+
+    const searchParams = useMemo(() => {
+        const params = new URLSearchParams();
+        if (query.trim()) params.set('query', query.trim());
+        if (category) params.set('category', category);
+        params.set('sort', sort);
+        return params.toString();
+    }, [query, category, sort]);
+
+    useEffect(() => {
+        let mounted = true;
+        setLoading(true);
+        setError('');
+
+        Promise.all([
+            fetch(`/api/commands?${searchParams}`).then((res) => {
+                if (!res.ok) throw new Error('Не удалось загрузить команды');
+                return res.json();
+            }),
+            fetch('/api/meta').then((res) => {
+                if (!res.ok) throw new Error('Не удалось загрузить метаданные');
+                return res.json();
+            }),
+        ])
+            .then(([catalog, metaInfo]) => {
+                if (!mounted) return;
+                setCommands(catalog.items || []);
+                setMeta(metaInfo || { categories: [], tags: [], count: 0 });
+            })
+            .catch((err) => {
+                if (!mounted) return;
+                setError(err.message || 'Ошибка загрузки');
+            })
+            .finally(() => {
+                if (mounted) setLoading(false);
+            });
+
+        return () => {
+            mounted = false;
+        };
+    }, [searchParams]);
+
+    const handleInstall = async (slug) => {
+        try {
+            const res = await fetch(`/api/commands/${slug}/install`);
+            if (!res.ok) throw new Error('Не удалось получить install-инструкцию');
+            const data = await res.json();
+            setInstallHints((prev) => ({ ...prev, [slug]: data }));
+            await fetch(`/api/commands/${slug}/install-track`, { method: 'POST' });
+        } catch (err) {
+            setInstallHints((prev) => ({
+                ...prev,
+                [slug]: { error: err.message || 'Ошибка установки' },
+            }));
+        }
+    };
 
   return (
-    <div className="CommandList">
-      {commands.map((command) => (
-        <div className="command" key={command.name}>
-          <h3>{command.name}</h3>
-          <p>{command.description}</p> 
-          <code>cmd install {command.name}</code>
-        </div>
-      ))}
-    </div>
+        <section className="store-section">
+            <div className="toolbar">
+                <input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Поиск команд: weather, files, fun..."
+                />
+                <select value={category} onChange={(e) => setCategory(e.target.value)}>
+                    <option value="">Все категории</option>
+                    {(meta.categories || []).map((item) => (
+                        <option key={item} value={item}>{item}</option>
+                    ))}
+                </select>
+                <select value={sort} onChange={(e) => setSort(e.target.value)}>
+                    <option value="downloads">Сначала популярные</option>
+                    <option value="rating">Сначала рейтинг</option>
+                    <option value="newest">Сначала новые версии</option>
+                    <option value="name">По имени</option>
+                </select>
+            </div>
+
+            <div className="meta-row">
+                <span>Команд в реестре: {meta.count || commands.length}</span>
+                <span>Найдено: {commands.length}</span>
+            </div>
+
+            {loading && <div className="state-box">Загрузка каталога...</div>}
+            {!loading && error && <div className="state-box error">{error}</div>}
+
+            {!loading && !error && (
+                <div className="CommandList">
+                    {commands.map((command) => {
+                        const hint = installHints[command.slug];
+                        return (
+                            <article className="command" key={command.slug}>
+                                <div className="top-row">
+                                    <h3>{command.name}</h3>
+                                    {command.verified && <span className="badge verified">verified</span>}
+                                </div>
+                                <p>{command.description}</p>
+                                <div className="stats">
+                                    <span>v{command.version}</span>
+                                    <span>⭐ {command.rating}</span>
+                                    <span>⬇ {command.downloads.toLocaleString('ru-RU')}</span>
+                                </div>
+                                <div className="tags">
+                                    {(command.tags || []).map((tag) => (
+                                        <span key={tag} className="badge">#{tag}</span>
+                                    ))}
+                                </div>
+
+                                <div className="install-actions">
+                                    <button onClick={() => handleInstall(command.slug)}>Установить</button>
+                                    <a href={command.sourceUrl} target="_blank" rel="noreferrer">Исходник</a>
+                                </div>
+
+                                <code>store install {command.slug}</code>
+
+                                {hint?.installSnippet && (
+                                    <div className="hint-box">
+                                        <div>Команда:</div>
+                                        <code>{hint.installSnippet}</code>
+                                        <div>Manual fallback:</div>
+                                        <code>{hint.manualSnippet}</code>
+                                    </div>
+                                )}
+
+                                {hint?.error && <div className="hint-box error">{hint.error}</div>}
+                            </article>
+                        );
+                    })}
+                </div>
+            )}
+        </section>
   );
 }
 

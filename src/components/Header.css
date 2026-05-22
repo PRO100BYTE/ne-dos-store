@@ -1,47 +1,83 @@
 .Header {
-    display: flex;
-    align-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 24px;
+  border-bottom: 1px solid rgba(107, 255, 173, 0.18);
+  background: linear-gradient(180deg, rgba(11, 27, 20, 0.95), rgba(11, 27, 20, 0.45));
+  position: sticky;
+  top: 0;
+  backdrop-filter: blur(6px);
+  z-index: 10;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo img {
+  width: 42px;
+  height: 42px;
+}
+
+.logo span {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.subtitle {
+  color: #9bc9b0;
+  font-size: 12px;
+}
+
+.status-panel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.status.ok {
+  color: #b8fbd3;
+  border-color: rgba(127, 255, 194, 0.35);
+  background: rgba(0, 255, 153, 0.12);
+}
+
+.status.fail {
+  color: #ffc5c5;
+  border-color: rgba(255, 120, 120, 0.4);
+  background: rgba(255, 89, 89, 0.14);
+}
+
+.repo-link {
+  color: #8ad1ff;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.repo-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 740px) {
+  .Header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .status-panel {
+    width: 100%;
     justify-content: space-between;
-    padding: 20px;
   }
-  
-  .logo {
-    display: flex;
-    align-items: center;
-  }
-  
-  .logo img {
-    width: 50px;
-    height: 50px;
-  }
-  
-  .logo span {
-    font-size: 24px;
-    font-weight: bold;
-    margin-left: 10px;
-  }
-  
-  .login {
-    position: relative;
-  }
-  
-  .login button {
-    border: none;
-    border-radius: 5px;
-    padding: 10px 10px;
-    background-color: #610094;
-    color: white;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.3s ease;
-  }
-  
-  .login button:hover {
-    transform: scale(1.1);
-  }
-  
-  .login button i {
-    margin-right: 10px;
-  }
+}
   
