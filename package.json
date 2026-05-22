@@ -30,6 +30,7 @@
     "server": "node server/index.js",
     "start:prod": "node server/index.js",
     "start:ci": "node server/index.js",
+    "predev": "kill-port 3055 8787",
     "dev": "concurrently -k -n API,WEB -c yellow.bold,cyan.bold \"npm run server\" \"npm run frontend\"",
     "build": "react-scripts build",
     "build:frontend": "react-scripts build",
@@ -56,5 +57,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "kill-port": "^2.0.1"
   }
 }
