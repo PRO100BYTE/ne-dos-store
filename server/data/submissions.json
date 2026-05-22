@@ -1,1 +1,23 @@
-[]
+[
+  {
+    "id": "6c80ec5b-17b5-4740-88f6-88d502919187",
+    "slug": "etest",
+    "name": "etest",
+    "title": "test",
+    "description": "test",
+    "author": "thedayg0ne",
+    "category": "community",
+    "tags": [
+      "community"
+    ],
+    "version": "1.0.0",
+    "status": "pending",
+    "sourceUrl": "/api/packages/submitted/etest.js",
+    "sha256": "ac9beb6e9207e566f17cfb291b52cf25b0a5e49d59a998ee61b36a3fa5488039",
+    "moderationNote": "",
+    "scriptPath": "C:\\Users\\e.struchkov\\Documents\\GitHub\\PRO100BYTE\\ne-dos-store\\server\\packages\\submitted\\etest.js",
+    "createdAt": "2026-05-22T03:29:39.082Z",
+    "verified": false,
+    "origin": "submitted"
+  }
+]

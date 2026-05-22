@@ -19,6 +19,10 @@
   flex-wrap: wrap;
 }
 
+.admin-auth--info {
+  justify-content: flex-end;
+}
+
 .admin-sculk {
   display: flex;
   gap: 12px;
@@ -83,6 +87,24 @@
   border-radius: 12px;
   padding: 14px;
   margin-bottom: 14px;
+}
+
+.admin-denied {
+  border: 1px solid #8a4141;
+  background: rgba(90, 20, 20, 0.2);
+  border-radius: 12px;
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.admin-denied button {
+  border: 1px solid #2f6147;
+  background: #12231a;
+  color: #c7ffe0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  width: fit-content;
 }
 
 .admin-list {

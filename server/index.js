@@ -20,6 +20,8 @@ const SCULK_ALLOW_CODE_FALLBACK = String(process.env.SCULK_ALLOW_CODE_FALLBACK |
 const SCULK_ALLOW_TOKEN_FALLBACK = String(process.env.SCULK_ALLOW_TOKEN_FALLBACK || 'true') === 'true';
 const PASSPORT_BOOTSTRAP_ADMIN = process.env.PASSPORT_BOOTSTRAP_ADMIN || 'admin';
 const PASSPORT_BOOTSTRAP_PASSWORD = process.env.PASSPORT_BOOTSTRAP_PASSWORD || 'admin123';
+const ROLE_ADMINISTRATOR = 'Administrator';
+const ROLE_APP_MODERATOR = 'ApplicationModerator';
 
 const DATA_DIR = path.join(__dirname, 'data');
 const PACKAGES_DIR = path.join(__dirname, 'packages');
@@ -106,6 +108,19 @@ function loadPassportAccounts() {
   return accounts;
 }
 
+function normalizeRoleName(role) {
+  const value = String(role || '').trim();
+  if (!value) return '';
+  if (value.toLowerCase() === 'admin') return ROLE_ADMINISTRATOR;
+  if (value.toLowerCase() === 'moderator') return ROLE_APP_MODERATOR;
+  return value;
+}
+
+function normalizedRoles(roles) {
+  if (!Array.isArray(roles)) return [];
+  return Array.from(new Set(roles.map((item) => normalizeRoleName(item)).filter(Boolean)));
+}
+
 function savePassportAccounts(accounts) {
   writeJson(PASSPORT_ACCOUNTS_FILE, accounts);
 }
@@ -115,7 +130,7 @@ function safeAccount(account) {
     id: account.id,
     username: account.username,
     displayName: account.displayName,
-    roles: Array.isArray(account.roles) ? account.roles : [],
+    roles: normalizedRoles(account.roles),
     linkedSculkIds: Array.isArray(account.linkedSculkIds) ? account.linkedSculkIds : [],
     status: account.status || 'active',
     createdAt: account.createdAt,
@@ -130,7 +145,7 @@ function createPassportSession(account, authMethod = 'local') {
     accountId: account.id,
     username: account.username,
     displayName: account.displayName,
-    roles: Array.isArray(account.roles) ? account.roles : [],
+    roles: normalizedRoles(account.roles),
     issuedAt: Date.now(),
     expiresAt: Date.now() + (1000 * 60 * 60 * 24 * 7),
   });
@@ -163,7 +178,7 @@ function ensureBootstrapAdmin() {
     username: PASSPORT_BOOTSTRAP_ADMIN,
     displayName: '.nedos Passport Admin',
     passwordHash: passwordHash(PASSPORT_BOOTSTRAP_PASSWORD),
-    roles: ['uploader', 'moderator', 'admin'],
+    roles: ['uploader', ROLE_APP_MODERATOR, ROLE_ADMINISTRATOR],
     linkedSculkIds: [],
     status: 'active',
     createdAt: nowIso(),
@@ -434,7 +449,8 @@ function adminOnly(req, res, next) {
   const token = req.header('x-admin-token');
   if (!token || token !== ADMIN_TOKEN) {
     const account = findAccountBySession(sculkSession);
-    if (!sculkSession || sculkSession.kind !== 'passport' || !Array.isArray(sculkSession.roles) || !sculkSession.roles.includes('admin') || !account) {
+    const roles = normalizedRoles(sculkSession?.roles || account?.roles || []);
+    if (!sculkSession || sculkSession.kind !== 'passport' || !roles.includes(ROLE_ADMINISTRATOR) || !account) {
       res.status(401).json({ message: 'Admin role required (.nedos Passport or admin token)' });
       return;
     }
@@ -457,7 +473,7 @@ function requirePassport(req, res, next) {
 }
 
 function requireRole(roles, message) {
-  const expected = Array.isArray(roles) ? roles : [roles];
+  const expected = normalizedRoles(Array.isArray(roles) ? roles : [roles]);
   return (req, res, next) => {
     const session = sessionFromRequest(req);
     const account = findAccountBySession(session);
@@ -465,7 +481,8 @@ function requireRole(roles, message) {
       res.status(401).json({ message: 'Вход обязателен: .nedos Passport' });
       return;
     }
-    const hasRole = expected.some((role) => (account.roles || []).includes(role));
+    const accountRoles = normalizedRoles(account.roles || []);
+    const hasRole = expected.some((role) => accountRoles.includes(role));
     if (!hasRole) {
       res.status(403).json({ message: message || `Требуется роль: ${expected.join(' / ')}` });
       return;
@@ -666,6 +683,26 @@ app.get('/api/auth/session', requirePassport, (req, res) => {
   res.json({ account: safeAccount(req.passportAccount), session: req.passportSession });
 });
 
+app.get('/api/auth/sculk/authorize', (req, res) => {
+  const clientId = process.env.SCULK_CLIENT_ID || '';
+  if (!clientId) {
+    res.status(503).json({ message: 'Sculk OAuth не настроен (отсутствует SCULK_CLIENT_ID)' });
+    return;
+  }
+
+  const state = base64UrlEncode(JSON.stringify({ nonce: crypto.randomBytes(16).toString('hex'), iat: Date.now() }));
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: SCULK_CALLBACK_URL,
+    response_type: 'code',
+    scope: 'profile',
+    state,
+  });
+  const redirectUrl = `${SCULK_AUTHORIZE_URL}?${params.toString()}`;
+
+  res.json({ redirectUrl, state });
+});
+
 app.post('/api/auth/sculk/login', async (req, res) => {
   const mode = String(req.body?.mode || '').toLowerCase();
 
@@ -844,7 +881,7 @@ app.post('/api/commands/:slug/reviews', async (req, res) => {
   res.status(201).json(review);
 });
 
-app.post('/api/submissions', requireRole(['uploader', 'moderator', 'admin'], 'Для загрузки команды нужна учетная запись .nedos Passport с ролью uploader/moderator/admin'), async (req, res) => {
+app.post('/api/submissions', requireRole(['uploader', ROLE_APP_MODERATOR, ROLE_ADMINISTRATOR], 'Для загрузки команды нужна учетная запись .nedos Passport с ролью uploader/ApplicationModerator/Administrator'), async (req, res) => {
   const { name, title, description, author, category, tags, version, scriptBody } = req.body || {};
   if (!name || !description || !category || !scriptBody) {
     res.status(400).json({ message: 'name, description, category and scriptBody are required' });
@@ -884,7 +921,7 @@ app.post('/api/submissions', requireRole(['uploader', 'moderator', 'admin'], 'Д
   res.status(201).json(entry);
 });
 
-app.get('/api/admin/overview', requireRole(['moderator', 'admin'], 'Требуется роль модератора приложений или администратора'), async (_req, res) => {
+app.get('/api/admin/overview', requireRole([ROLE_APP_MODERATOR, ROLE_ADMINISTRATOR], 'Требуется роль ApplicationModerator или Administrator'), async (_req, res) => {
   const commands = await loadAllCommandsAndMeta();
   const submissions = await loadSubmissions();
   const reviews = await loadReviews();
@@ -901,14 +938,14 @@ app.get('/api/admin/overview', requireRole(['moderator', 'admin'], 'Требуе
   });
 });
 
-app.get('/api/admin/submissions', requireRole(['moderator', 'admin'], 'Требуется роль модератора приложений или администратора'), async (req, res) => {
+app.get('/api/admin/submissions', requireRole([ROLE_APP_MODERATOR, ROLE_ADMINISTRATOR], 'Требуется роль ApplicationModerator или Administrator'), async (req, res) => {
   const status = req.query.status ? String(req.query.status) : '';
   const submissions = await loadSubmissions();
   const filtered = status ? submissions.filter((item) => item.status === status) : submissions;
   res.json({ items: filtered });
 });
 
-app.post('/api/admin/submissions/:id/approve', requireRole(['moderator', 'admin'], 'Требуется роль модератора приложений или администратора'), async (req, res) => {
+app.post('/api/admin/submissions/:id/approve', requireRole([ROLE_APP_MODERATOR, ROLE_ADMINISTRATOR], 'Требуется роль ApplicationModerator или Administrator'), async (req, res) => {
   const current = (await loadSubmissions()).find((item) => item.id === req.params.id);
   if (!current) {
     res.status(404).json({ message: 'Submission not found' });
@@ -932,7 +969,7 @@ app.post('/api/admin/submissions/:id/approve', requireRole(['moderator', 'admin'
   res.json(updated);
 });
 
-app.post('/api/admin/submissions/:id/reject', requireRole(['moderator', 'admin'], 'Требуется роль модератора приложений или администратора'), async (req, res) => {
+app.post('/api/admin/submissions/:id/reject', requireRole([ROLE_APP_MODERATOR, ROLE_ADMINISTRATOR], 'Требуется роль ApplicationModerator или Administrator'), async (req, res) => {
   const current = (await loadSubmissions()).find((item) => item.id === req.params.id);
   if (!current) {
     res.status(404).json({ message: 'Submission not found' });
@@ -955,17 +992,17 @@ app.post('/api/admin/submissions/:id/reject', requireRole(['moderator', 'admin']
   res.json(updated);
 });
 
-app.get('/api/admin/moderation-history', requireRole('admin', 'Требуется роль администратора'), (_req, res) => {
+app.get('/api/admin/moderation-history', requireRole(ROLE_ADMINISTRATOR, 'Требуется роль Administrator'), (_req, res) => {
   const rows = readJson(MODERATION_HISTORY_FILE, []);
   res.json({ items: rows.slice().reverse() });
 });
 
-app.get('/api/admin/accounts', requireRole('admin', 'Требуется роль администратора'), (_req, res) => {
+app.get('/api/admin/accounts', requireRole(ROLE_ADMINISTRATOR, 'Требуется роль Administrator'), (_req, res) => {
   const items = loadPassportAccounts().map(safeAccount);
   res.json({ items });
 });
 
-app.post('/api/admin/accounts', requireRole('admin', 'Требуется роль администратора'), (req, res) => {
+app.post('/api/admin/accounts', requireRole(ROLE_ADMINISTRATOR, 'Требуется роль Administrator'), (req, res) => {
   const username = usernameSafe(req.body?.username);
   const password = String(req.body?.password || '');
   const displayName = String(req.body?.displayName || username || 'NE-DOS User').slice(0, 80);
@@ -1006,7 +1043,7 @@ app.post('/api/admin/accounts', requireRole('admin', 'Требуется рол�
   res.status(201).json({ account: safeAccount(entry) });
 });
 
-app.patch('/api/admin/accounts/:username', requireRole('admin', 'Требуется роль администратора'), (req, res) => {
+app.patch('/api/admin/accounts/:username', requireRole(ROLE_ADMINISTRATOR, 'Требуется роль Administrator'), (req, res) => {
   const target = usernameSafe(req.params.username);
   const accounts = loadPassportAccounts();
   const idx = accounts.findIndex((item) => item.username === target);
@@ -1034,7 +1071,7 @@ app.patch('/api/admin/accounts/:username', requireRole('admin', 'Требует�
   res.json({ account: safeAccount(next) });
 });
 
-app.delete('/api/admin/accounts/:username', requireRole('admin', 'Требуется роль администратора'), (req, res) => {
+app.delete('/api/admin/accounts/:username', requireRole(ROLE_ADMINISTRATOR, 'Требуется роль Administrator'), (req, res) => {
   const target = usernameSafe(req.params.username);
   const accounts = loadPassportAccounts();
   const idx = accounts.findIndex((item) => item.username === target);
@@ -1055,12 +1092,12 @@ app.delete('/api/admin/accounts/:username', requireRole('admin', 'Требует
   res.json({ deleted: safeAccount(removed) });
 });
 
-app.get('/api/admin/apps', requireRole('admin', 'Требуется роль администратора'), async (_req, res) => {
+app.get('/api/admin/apps', requireRole(ROLE_ADMINISTRATOR, 'Требуется роль Administrator'), async (_req, res) => {
   const items = await loadAllCommandsAndMeta();
   res.json({ items });
 });
 
-app.post('/api/admin/apps', requireRole('admin', 'Требуется роль администратора'), (req, res) => {
+app.post('/api/admin/apps', requireRole(ROLE_ADMINISTRATOR, 'Требуется роль Administrator'), (req, res) => {
   const { slug, title, description, category, tags, scriptBody } = req.body || {};
   const safeSlug = fileNameSafe(slug);
   if (!safeSlug || !description || !category || !scriptBody) {
@@ -1106,7 +1143,7 @@ app.post('/api/admin/apps', requireRole('admin', 'Требуется роль а
   res.status(201).json(entry);
 });
 
-app.patch('/api/admin/commands/:slug', adminOnly, async (req, res) => {
+app.patch('/api/admin/commands/:slug', requireRole(ROLE_ADMINISTRATOR, 'Требуется роль Administrator'), async (req, res) => {
   const { verified, category, tags, hidden } = req.body || {};
   const community = readJson(COMMUNITY_REGISTRY_FILE, []);
   const idx = community.findIndex((item) => item.slug === req.params.slug);
@@ -1134,7 +1171,7 @@ app.patch('/api/admin/commands/:slug', adminOnly, async (req, res) => {
   res.json(next);
 });
 
-app.delete('/api/admin/apps/:slug', requireRole('admin', 'Требуется роль администратора'), (req, res) => {
+app.delete('/api/admin/apps/:slug', requireRole(ROLE_ADMINISTRATOR, 'Требуется роль Administrator'), (req, res) => {
   const slug = fileNameSafe(req.params.slug);
   const registry = readJson(COMMUNITY_REGISTRY_FILE, []);
   const idx = registry.findIndex((item) => item.slug === slug);

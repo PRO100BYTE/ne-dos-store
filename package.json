@@ -24,10 +24,11 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "set DANGEROUSLY_DISABLE_HOST_CHECK=true&& set PORT=3055&& react-scripts start",
+    "frontend": "set DANGEROUSLY_DISABLE_HOST_CHECK=true&& set PORT=3055&& react-scripts start",
     "server": "node server/index.js",
     "start:prod": "node server/index.js",
-    "dev": "concurrently \"npm run server\" \"npm run start\"",
+    "dev": "concurrently -k -n API,WEB -c yellow.bold,cyan.bold \"npm run server\" \"npm run frontend\"",
     "build": "react-scripts build",
     "build:frontend": "react-scripts build",
     "test": "react-scripts test",

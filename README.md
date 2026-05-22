@@ -31,7 +31,7 @@ NE-DOS Store - fullstack-магазин команд для NE-DOS:
    `npm run dev`
 
 После запуска:
-- Frontend: `http://localhost:3000`
+- Frontend: `http://localhost:3055`
 - API: `http://localhost:8787`
 
 Bootstrap-админ `.nedos Passport` по умолчанию в dev-режиме:
@@ -49,10 +49,10 @@ Sculk Callback URL для Strict URL Check:
 
 ## Скрипты
 
-- `npm run dev` - одновременно запускает API и React
+- `npm run dev` - одновременно запускает API и React (WEB на `3055`)
 - `npm run server` - только NodeJS backend
 - `npm run start:prod` - backend + выдача собранного frontend из `build/`
-- `npm start` - только React frontend
+- `npm start` / `npm run frontend` - только React frontend (порт `3055`)
 - `npm run build` / `npm run build:frontend` - production build frontend
 - `npm run test:ci` - запуск unit tests без watch
 - `npm run test:integration` - smoke/integration проверки API

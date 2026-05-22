@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "id": "e7cacc91-fde4-481a-88ce-6c0232a186bb",
+    "commandSlug": "edit",
+    "origin": "core",
+    "installerFingerprint": "::1",
+    "createdAt": "2026-05-22T03:25:10.941Z"
+  },
+  {
+    "id": "185d105d-2f85-4207-b65a-a670133960a3",
+    "commandSlug": "edit",
+    "origin": "core",
+    "installerFingerprint": "::1",
+    "createdAt": "2026-05-22T03:25:18.324Z"
+  }
+]

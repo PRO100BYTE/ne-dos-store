@@ -1,7 +1,7 @@
 import React from 'react';
 import './Header.css';
 
-function Header({ apiOnline, view, onNavigate }) {
+function Header({ apiOnline, view, onNavigate, onOpenStatus, account, onOpenAuth, onLogout }) {
   return (
     <div className="Header">
       <div className="logo">
@@ -18,11 +18,18 @@ function Header({ apiOnline, view, onNavigate }) {
           <button className={view === 'admin' ? 'nav-btn active' : 'nav-btn'} onClick={() => onNavigate('admin')}>Админка</button>
         </div>
         <span className={apiOnline ? 'status ok' : 'status fail'}>
-          {apiOnline ? 'API online' : 'API offline'}
+          <button type="button" className="status-link" onClick={onOpenStatus}>
+            {apiOnline ? 'API online' : 'API offline'}
+          </button>
         </span>
-        <a className="repo-link" href="https://github.com/PRO100BYTE/ne-dos" target="_blank" rel="noreferrer">
-          Репозиторий команд
-        </a>
+        <div className="user-menu">
+          <button type="button" className="user-btn" onClick={onOpenAuth}>
+            {account ? (account.displayName || account.username || 'User') : 'Войти'}
+          </button>
+          {account && (
+            <button type="button" className="user-logout" onClick={onLogout}>Выйти</button>
+          )}
+        </div>
       </div>
     </div>
   );

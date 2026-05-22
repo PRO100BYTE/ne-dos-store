@@ -39,5 +39,18 @@
     "status": "active",
     "createdAt": "2026-05-22T02:54:49.328Z",
     "updatedAt": "2026-05-22T02:54:49.328Z"
+  },
+  {
+    "id": "e412bd91-5ae2-47b6-92a4-e5826e64c001",
+    "username": "thedayg0ne",
+    "displayName": "thedayg0ne",
+    "passwordHash": "e94668b7757adae0788db89775f6c732027344ff36bf7a8dfc9be02314775da1",
+    "roles": [
+      "uploader"
+    ],
+    "linkedSculkIds": [],
+    "status": "active",
+    "createdAt": "2026-05-22T03:17:17.866Z",
+    "updatedAt": "2026-05-22T03:17:17.866Z"
   }
 ]
