@@ -1,22 +1,40 @@
 .admin-section {
   max-width: 1240px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 40px 20px;
+}
+
+.admin-section h2 {
+  font-size: 32px;
+  margin: 0 0 12px 0;
+  font-weight: 700;
+  background: linear-gradient(135deg, #ff7b54 0%, #ff9966 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-transform: uppercase;
+  letter-spacing: 2px;
 }
 
 .admin-head p {
   color: #9ec2b0;
+  margin-bottom: 24px;
 }
 
 .admin-auth,
 .admin-toolbar {
   display: flex;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
 }
 
 .admin-auth {
-  flex-wrap: wrap;
+  background: linear-gradient(135deg, rgba(13, 29, 22, 0.92) 0%, rgba(7, 18, 14, 0.88) 100%);
+  border: 2px solid #244c37;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(134, 255, 181, 0.1);
 }
 
 .admin-auth--info {
@@ -39,63 +57,148 @@
 
 .admin-auth input,
 .admin-toolbar select {
-  background: #0b1310;
+  background: rgba(11, 19, 16, 0.8);
   color: #d6ffe7;
   border: 1px solid #284534;
   border-radius: 10px;
   padding: 10px 12px;
+  transition: all 0.2s ease;
+}
+
+.admin-auth input:focus,
+.admin-toolbar select:focus {
+  outline: none;
+  background: rgba(11, 19, 16, 1);
+  border-color: #86ffb5;
+  box-shadow: 0 0 12px rgba(134, 255, 181, 0.2);
 }
 
 .admin-auth button,
 .admin-actions button {
-  border: 1px solid #2f6147;
-  background: #12231a;
-  color: #c7ffe0;
+  background: linear-gradient(135deg, #2d6d47 0%, #1f4930 100%);
+  border: 2px solid #86ffb5;
+  color: #86ffb5;
   border-radius: 10px;
   padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.admin-auth button:hover,
+.admin-actions button:hover {
+  background: linear-gradient(135deg, #3a7d54 0%, #275c39 100%);
+  box-shadow: 0 0 20px rgba(134, 255, 181, 0.3);
+  transform: translateY(-2px);
 }
 
 .admin-stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
 .admin-card,
 .admin-item {
-  border: 1px solid #244c37;
+  border: 2px solid #244c37;
   border-radius: 14px;
-  padding: 14px;
-  background: linear-gradient(180deg, rgba(13, 29, 22, 0.96), rgba(7, 18, 14, 0.95));
+  padding: 18px;
+  background: linear-gradient(135deg, rgba(13, 29, 22, 0.92) 0%, rgba(7, 18, 14, 0.88) 100%);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(134, 255, 181, 0.1);
+  transition: all 0.3s ease;
+}
+
+.admin-card:hover {
+  border-color: #86ffb5;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(134, 255, 181, 0.2);
+  transform: translateY(-4px);
 }
 
 .admin-card strong {
   display: block;
-  font-size: 24px;
+  font-size: 28px;
+  color: #86ffb5;
+  margin-bottom: 6px;
+  font-weight: 700;
 }
 
 .admin-card span,
 .admin-meta,
 .admin-state {
   color: #9ec2b0;
+  font-size: 13px;
 }
 
 .admin-error {
-  border: 1px solid #8a4141;
-  background: rgba(90, 20, 20, 0.28);
+  border: 2px solid #8a4141;
+  background: linear-gradient(135deg, rgba(90, 20, 20, 0.3) 0%, rgba(60, 10, 10, 0.2) 100%);
   border-radius: 12px;
-  padding: 14px;
-  margin-bottom: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+  color: #ff9966;
 }
 
 .admin-denied {
-  border: 1px solid #8a4141;
-  background: rgba(90, 20, 20, 0.2);
-  border-radius: 12px;
-  padding: 14px;
+  border: 2px solid #8a4141;
+  background: linear-gradient(135deg, rgba(90, 20, 20, 0.25) 0%, rgba(60, 10, 10, 0.15) 100%);
+  border-radius: 14px;
+  padding: 24px;
+  display: grid;
+  gap: 14px;
+  text-align: center;
+}
+
+.admin-denied h3 {
+  color: #ff9966;
+  margin: 0;
+  font-size: 18px;
+}
+
+.admin-denied p {
+  color: #c09080;
+  margin: 0;
+  font-size: 14px;
+}
+
+.admin-denied button {
+  margin-top: 8px;
+}
+
+.admin-item {
   display: grid;
   gap: 10px;
+}
+
+.admin-item strong {
+  color: #86ffb5;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .admin-section {
+    padding: 24px 16px;
+  }
+
+  .admin-section h2 {
+    font-size: 24px;
+  }
+
+  .admin-stats {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  .admin-card strong {
+    font-size: 22px;
+  }
+
+  .admin-denied {
+    padding: 18px;
+  }
 }
 
 .admin-denied button {
