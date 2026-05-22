@@ -6,21 +6,12 @@ const semver = require('semver');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { db } = require('./db/database');
+const { checkDatabaseHealth } = require('./db/database');
 const {
   ROLE_ADMINISTRATOR,
   ROLE_APP_MODERATOR,
-  ROLE_UPLOADER,
-  ROLE_USER,
-  hashPassword,
-  verifyPassword,
-  getUserById,
-  getUserByUsername,
-  usernameExists,
-  createUser,
-  updateUser,
-  normalizeUser,
 } = require('./db/users');
+const { createAuthRouter } = require('./routes/auth');
 const { Pool } = require('pg');
 
 const app = express();
@@ -51,7 +42,7 @@ const PASSPORT_ACCOUNTS_FILE = path.join(DATA_DIR, 'passportAccounts.json');
 const MODERATION_HISTORY_FILE = path.join(DATA_DIR, 'moderation-history.json');
 const SCHEMA_FILE = path.join(__dirname, 'db', 'schema.sql');
 
-const db = process.env.DATABASE_URL
+const pgPool = process.env.DATABASE_URL
   ? new Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.PGSSL === 'disable' ? false : undefined })
   : null;
 
@@ -184,19 +175,33 @@ function appendModerationHistory(entry) {
 
 function ensureBootstrapAdmin() {
   const accounts = loadPassportAccounts();
-  if (accounts.some((item) => item.username === PASSPORT_BOOTSTRAP_ADMIN)) return;
+  const bootstrapRoles = ['uploader', ROLE_APP_MODERATOR, ROLE_ADMINISTRATOR];
+  const bootstrapPasswordHash = passwordHash(PASSPORT_BOOTSTRAP_PASSWORD);
+  const existingIndex = accounts.findIndex((item) => item.username === PASSPORT_BOOTSTRAP_ADMIN);
 
-  accounts.push({
-    id: crypto.randomUUID(),
-    username: PASSPORT_BOOTSTRAP_ADMIN,
-    displayName: '.nedos Passport Admin',
-    passwordHash: passwordHash(PASSPORT_BOOTSTRAP_PASSWORD),
-    roles: ['uploader', ROLE_APP_MODERATOR, ROLE_ADMINISTRATOR],
-    linkedSculkIds: [],
-    status: 'active',
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
-  });
+  if (existingIndex !== -1) {
+    const current = accounts[existingIndex];
+    accounts[existingIndex] = {
+      ...current,
+      displayName: current.displayName || '.nedos Passport Admin',
+      passwordHash: bootstrapPasswordHash,
+      roles: normalizedRoles([...(Array.isArray(current.roles) ? current.roles : []), ...bootstrapRoles]),
+      status: 'active',
+      updatedAt: nowIso(),
+    };
+  } else {
+    accounts.push({
+      id: crypto.randomUUID(),
+      username: PASSPORT_BOOTSTRAP_ADMIN,
+      displayName: '.nedos Passport Admin',
+      passwordHash: bootstrapPasswordHash,
+      roles: bootstrapRoles,
+      linkedSculkIds: [],
+      status: 'active',
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    });
+  }
   savePassportAccounts(accounts);
 }
 
@@ -205,9 +210,9 @@ function nowIso() {
 }
 
 async function initDb() {
-  if (!db) return false;
+  if (!pgPool) return false;
   const sql = fs.readFileSync(SCHEMA_FILE, 'utf-8');
-  await db.query(sql);
+  await pgPool.query(sql);
   return true;
 }
 
@@ -248,8 +253,8 @@ function commandTitle(name) {
 }
 
 async function loadReviews() {
-  if (!db) return readJson(REVIEWS_FILE, []);
-  const result = await db.query('SELECT * FROM command_reviews ORDER BY created_at DESC');
+  if (!pgPool) return readJson(REVIEWS_FILE, []);
+  const result = await pgPool.query('SELECT * FROM command_reviews ORDER BY created_at DESC');
   return result.rows.map((row) => ({
     id: row.id,
     commandSlug: row.command_slug,
@@ -261,13 +266,13 @@ async function loadReviews() {
 }
 
 async function saveReview(review) {
-  if (!db) {
+  if (!pgPool) {
     const reviews = readJson(REVIEWS_FILE, []);
     reviews.push(review);
     writeJson(REVIEWS_FILE, reviews);
     return review;
   }
-  await db.query(
+  await pgPool.query(
     'INSERT INTO command_reviews (id, command_slug, author_name, rating, comment, created_at) VALUES ($1, $2, $3, $4, $5, $6)',
     [review.id, review.commandSlug, review.authorName, review.rating, review.comment, review.createdAt]
   );
@@ -275,8 +280,8 @@ async function saveReview(review) {
 }
 
 async function loadInstallHistory() {
-  if (!db) return readJson(INSTALL_HISTORY_FILE, []);
-  const result = await db.query('SELECT * FROM install_history ORDER BY created_at DESC');
+  if (!pgPool) return readJson(INSTALL_HISTORY_FILE, []);
+  const result = await pgPool.query('SELECT * FROM install_history ORDER BY created_at DESC');
   return result.rows.map((row) => ({
     id: row.id,
     commandSlug: row.command_slug,
@@ -287,13 +292,13 @@ async function loadInstallHistory() {
 }
 
 async function saveInstallHistory(item) {
-  if (!db) {
+  if (!pgPool) {
     const items = readJson(INSTALL_HISTORY_FILE, []);
     items.push(item);
     writeJson(INSTALL_HISTORY_FILE, items);
     return item;
   }
-  await db.query(
+  await pgPool.query(
     'INSERT INTO install_history (id, command_slug, origin, installer_fingerprint, created_at) VALUES ($1, $2, $3, $4, $5)',
     [item.id, item.commandSlug, item.origin, item.installerFingerprint, item.createdAt]
   );
@@ -301,8 +306,8 @@ async function saveInstallHistory(item) {
 }
 
 async function loadSubmissions() {
-  if (!db) return readJson(SUBMISSIONS_FILE, []);
-  const result = await db.query('SELECT * FROM command_submissions ORDER BY created_at DESC');
+  if (!pgPool) return readJson(SUBMISSIONS_FILE, []);
+  const result = await pgPool.query('SELECT * FROM command_submissions ORDER BY created_at DESC');
   return result.rows.map((row) => ({
     id: row.id,
     slug: row.slug,
@@ -327,13 +332,13 @@ async function loadSubmissions() {
 }
 
 async function insertSubmission(entry) {
-  if (!db) {
+  if (!pgPool) {
     const items = readJson(SUBMISSIONS_FILE, []);
     items.push(entry);
     writeJson(SUBMISSIONS_FILE, items);
     return entry;
   }
-  await db.query(
+  await pgPool.query(
     `INSERT INTO command_submissions
       (id, slug, name, title, description, author, category, tags, version, status, source_url, sha256, moderation_note, script_path, created_at)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
@@ -359,7 +364,7 @@ async function insertSubmission(entry) {
 }
 
 async function updateSubmission(id, patch) {
-  if (!db) {
+  if (!pgPool) {
     const items = readJson(SUBMISSIONS_FILE, []);
     const next = items.map((item) => item.id === id ? { ...item, ...patch } : item);
     writeJson(SUBMISSIONS_FILE, next);
@@ -368,7 +373,7 @@ async function updateSubmission(id, patch) {
   const current = (await loadSubmissions()).find((item) => item.id === id);
   if (!current) return null;
   const merged = { ...current, ...patch };
-  await db.query(
+  await pgPool.query(
     `UPDATE command_submissions
      SET status = $2, moderation_note = $3, reviewed_at = $4, reviewed_by = $5, source_url = $6, sha256 = $7
      WHERE id = $1`,
@@ -576,13 +581,16 @@ function packageFilePath(scope, slug) {
 }
 
 app.get('/api/health', async (_req, res) => {
-  let dbStatus = 'disabled';
-  if (db) {
+  let dbStatus = 'file-only';
+  if (checkDatabaseHealth()) {
+    dbStatus = 'sqlite-online';
+  }
+  if (pgPool) {
     try {
-      await db.query('SELECT 1');
-      dbStatus = 'online';
+      await pgPool.query('SELECT 1');
+      dbStatus = 'postgres-online';
     } catch {
-      dbStatus = 'error';
+      dbStatus = 'postgres-error';
     }
   }
   res.json({
@@ -593,218 +601,24 @@ app.get('/api/health', async (_req, res) => {
   });
 });
 
-app.get('/api/auth/sculk/config', (_req, res) => {
-  res.json({
-    authorizeUrl: SCULK_AUTHORIZE_URL,
-    callbackUrl: SCULK_CALLBACK_URL,
-    authType: 'oauth-without-oidc',
-    modes: ['token', 'code'],
-    canExchangeCode: Boolean(SCULK_TOKEN_URL) || SCULK_ALLOW_CODE_FALLBACK,
-    canAcceptToken: Boolean(SCULK_VALIDATE_URL) || SCULK_ALLOW_TOKEN_FALLBACK,
-    accountSystem: '.nedos Passport',
-  });
-});
-
-app.get('/api/auth/sculk/callback', (req, res) => {
-  res.json({
-    ok: true,
-    message: 'Sculk callback accepted. Exchange the code using POST /api/auth/sculk/login with mode=code.',
-    code: req.query.code ? String(req.query.code) : null,
-  });
-});
-
-app.post('/api/auth/passport/register', (req, res) => {
-  const username = usernameSafe(req.body?.username);
-  const password = String(req.body?.password || '');
-  const passwordConfirm = String(req.body?.passwordConfirm || '');
-  const displayName = String(req.body?.displayName || username || 'NE-DOS User').slice(0, 80);
-  const linkedSculkId = req.body?.linkedSculkId ? String(req.body.linkedSculkId) : null;
-
-  if (!username || !password || !passwordConfirm) {
-    res.status(400).json({ message: 'username, password and passwordConfirm are required' });
-    return;
-  }
-
-  // Проверка совпадения паролей
-  if (password !== passwordConfirm) {
-    res.status(400).json({ message: 'Пароли не совпадают' });
-    return;
-  }
-
-  // Валидация сложности пароля
-  if (password.length < 8) {
-    res.status(400).json({ message: 'Пароль должен быть не менее 8 символов' });
-    return;
-  }
-  if (!/[a-z]/.test(password)) {
-    res.status(400).json({ message: 'Пароль должен содержать строчные буквы' });
-    return;
-  }
-  if (!/[A-Z]/.test(password)) {
-    res.status(400).json({ message: 'Пароль должен содержать заглавные буквы' });
-    return;
-  }
-  if (!/[0-9]/.test(password)) {
-    res.status(400).json({ message: 'Пароль должен содержать цифры' });
-    return;
-  }
-
-  const accounts = loadPassportAccounts();
-  if (accounts.some((item) => item.username === username)) {
-    res.status(409).json({ message: 'Такой .nedos Passport уже существует' });
-    return;
-  }
-
-  const entry = {
-    id: crypto.randomUUID(),
-    username,
-    displayName,
-    passwordHash: passwordHash(password),
-    roles: ['uploader'],
-    linkedSculkIds: linkedSculkId ? [linkedSculkId] : [],
-    status: 'active',
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
-  };
-  accounts.push(entry);
-  savePassportAccounts(accounts);
-
-  const session = createPassportSession(entry, linkedSculkId ? 'sculk-linked-register' : 'local-register');
-  res.status(201).json({ session, account: safeAccount(entry) });
-});
-
-app.post('/api/auth/passport/login', (req, res) => {
-  const username = usernameSafe(req.body?.username);
-  const password = String(req.body?.password || '');
-  if (!username || !password) {
-    res.status(400).json({ message: 'username and password are required' });
-    return;
-  }
-
-  const account = loadPassportAccounts().find((item) => item.username === username && item.status !== 'disabled');
-  if (!account || account.passwordHash !== passwordHash(password)) {
-    res.status(401).json({ message: 'Неверные данные .nedos Passport' });
-    return;
-  }
-
-  const session = createPassportSession(account, 'local');
-  res.json({ session, account: safeAccount(account) });
-});
-
-app.post('/api/auth/passport/link-existing', (req, res) => {
-  const username = usernameSafe(req.body?.username);
-  const password = String(req.body?.password || '');
-  const linkedSculkId = String(req.body?.linkedSculkId || '').trim();
-  if (!username || !password || !linkedSculkId) {
-    res.status(400).json({ message: 'username, password and linkedSculkId are required' });
-    return;
-  }
-
-  const accounts = loadPassportAccounts();
-  const idx = accounts.findIndex((item) => item.username === username && item.status !== 'disabled');
-  if (idx === -1 || accounts[idx].passwordHash !== passwordHash(password)) {
-    res.status(401).json({ message: 'Неверные данные .nedos Passport' });
-    return;
-  }
-
-  const account = { ...accounts[idx] };
-  account.linkedSculkIds = Array.from(new Set([...(account.linkedSculkIds || []), linkedSculkId]));
-  account.updatedAt = nowIso();
-  accounts[idx] = account;
-  savePassportAccounts(accounts);
-
-  const session = createPassportSession(account, 'sculk-linked-existing');
-  res.json({ session, account: safeAccount(account) });
-});
-
-app.get('/api/auth/session', requirePassport, (req, res) => {
-  res.json({ account: safeAccount(req.passportAccount), session: req.passportSession });
-});
-
-app.get('/api/auth/sculk/authorize', (req, res) => {
-  const clientId = process.env.SCULK_CLIENT_ID || '';
-  if (!clientId) {
-    res.status(503).json({ message: 'Sculk OAuth не настроен (отсутствует SCULK_CLIENT_ID)' });
-    return;
-  }
-
-  const state = base64UrlEncode(JSON.stringify({ nonce: crypto.randomBytes(16).toString('hex'), iat: Date.now() }));
-  const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: SCULK_CALLBACK_URL,
-    response_type: 'code',
-    scope: 'profile',
-    state,
-  });
-  const redirectUrl = `${SCULK_AUTHORIZE_URL}?${params.toString()}`;
-
-  res.json({ redirectUrl, state });
-});
-
-app.post('/api/auth/sculk/login', async (req, res) => {
-  const mode = String(req.body?.mode || '').toLowerCase();
-
-  if (mode === 'token') {
-    const token = String(req.body?.token || '').trim();
-    const profile = await validateSculkToken(token);
-    if (!profile) {
-      res.status(401).json({ message: 'Invalid Sculk token' });
-      return;
-    }
-
-    const sculkIdentity = {
-      id: String(profile.id || profile.sub || profile.user_id || '').trim(),
-      name: profile.name || profile.username || 'Sculk User',
-      profile,
-    };
-    const account = loadPassportAccounts().find((item) => (item.linkedSculkIds || []).includes(sculkIdentity.id) && item.status !== 'disabled');
-    if (!sculkIdentity.id || !account) {
-      res.status(409).json({
-        code: 'SCULK_NOT_LINKED',
-        message: 'Sculk ID не связан с .nedos Passport. Укажите существующую учетную запись NE-DOS или зарегистрируйте новую.',
-        sculkIdentity,
-      });
-      return;
-    }
-
-    const session = createPassportSession(account, 'sculk-token');
-    res.json({ session, profile, account: safeAccount(account) });
-    return;
-  }
-
-  if (mode === 'code') {
-    const code = String(req.body?.code || '').trim();
-    const exchange = await exchangeSculkCode(code);
-    if (!exchange) {
-      res.status(401).json({ message: 'Unable to exchange Sculk grant code' });
-      return;
-    }
-
-    const accessToken = exchange.access_token || exchange.token || code;
-    const profile = await validateSculkToken(accessToken);
-
-    const sculkIdentity = {
-      id: String(profile?.id || profile?.sub || profile?.user_id || '').trim(),
-      name: profile?.name || profile?.username || 'Sculk User',
-      profile: profile || { name: 'Sculk User' },
-    };
-    const account = loadPassportAccounts().find((item) => (item.linkedSculkIds || []).includes(sculkIdentity.id) && item.status !== 'disabled');
-    if (!sculkIdentity.id || !account) {
-      res.status(409).json({
-        code: 'SCULK_NOT_LINKED',
-        message: 'Sculk ID не связан с .nedos Passport. Укажите существующую учетную запись NE-DOS или зарегистрируйте новую.',
-        sculkIdentity,
-      });
-      return;
-    }
-
-    const session = createPassportSession(account, 'sculk-code');
-    res.json({ session, profile: profile || { name: 'Sculk User' }, exchange, account: safeAccount(account) });
-    return;
-  }
-
-  res.status(400).json({ message: 'mode must be token or code' });
-});
+app.use('/api/auth', createAuthRouter({
+  usernameSafe,
+  passwordHash,
+  loadPassportAccounts,
+  savePassportAccounts,
+  safeAccount,
+  createPassportSession,
+  nowIso,
+  requirePassport,
+  validateSculkToken,
+  exchangeSculkCode,
+  sculkAuthorizeUrl: SCULK_AUTHORIZE_URL,
+  sculkCallbackUrl: SCULK_CALLBACK_URL,
+  sculkTokenUrl: SCULK_TOKEN_URL,
+  sculkValidateUrl: SCULK_VALIDATE_URL,
+  sculkAllowCodeFallback: SCULK_ALLOW_CODE_FALLBACK,
+  sculkAllowTokenFallback: SCULK_ALLOW_TOKEN_FALLBACK,
+}));
 
 app.get('/api/meta', async (_req, res) => {
   const commands = await loadAllCommandsAndMeta();

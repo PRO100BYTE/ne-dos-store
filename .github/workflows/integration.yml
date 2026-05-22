@@ -23,21 +23,38 @@ jobs:
         env:
           ADMIN_TOKEN: ne-dos-admin-dev-token
         run: |
-          npm run start:prod &
+          npm run start:ci > server.log 2>&1 &
           echo $! > server.pid
       - name: Wait for health endpoint
         run: |
           for i in {1..30}; do
-            curl -fsS http://localhost:8787/api/health && exit 0
+            if curl -fsS http://localhost:8787/api/health; then
+              exit 0
+            fi
+
+            if ! kill -0 $(cat server.pid) 2>/dev/null; then
+              echo "Server process crashed before health endpoint became ready"
+              echo "===== server.log ====="
+              cat server.log || true
+              exit 1
+            fi
+
             sleep 2
           done
           echo "Server did not start in time"
+          echo "===== server.log ====="
+          cat server.log || true
           exit 1
       - name: Run integration checks
         env:
           ADMIN_TOKEN: ne-dos-admin-dev-token
           STORE_BASE_URL: http://localhost:8787
         run: npm run test:integration
+      - name: Print backend logs on failure
+        if: failure()
+        run: |
+          echo "===== server.log ====="
+          cat server.log || true
       - name: Stop backend
         if: always()
         run: |

@@ -14,16 +14,57 @@ async function main() {
   if (health.status !== 'ok') throw new Error('Health check failed');
 
   const authUser = `ci-user-${Date.now()}`;
+  const initialPassword = 'CiPassword123';
+  const updatedPassword = 'CiPassword456';
   const register = await request('/api/auth/passport/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       username: authUser,
-      password: 'ci-password',
+      password: initialPassword,
+      passwordConfirm: initialPassword,
       displayName: 'CI Uploader',
     }),
   });
   if (!register.session) throw new Error('Passport registration failed');
+
+  const profileBefore = await request('/api/auth/profile', {
+    headers: { 'x-nedos-session': register.session },
+  });
+  if (!profileBefore.account || profileBefore.account.username !== authUser) {
+    throw new Error('Profile fetch after register failed');
+  }
+
+  const profileUpdated = await request('/api/auth/profile', {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-nedos-session': register.session,
+    },
+    body: JSON.stringify({ displayName: 'CI Updated User' }),
+  });
+  if (profileUpdated.account?.displayName !== 'CI Updated User') {
+    throw new Error('Profile update failed');
+  }
+
+  const passwordUpdated = await request('/api/auth/profile/password', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-nedos-session': profileUpdated.session,
+    },
+    body: JSON.stringify({ currentPassword: initialPassword, newPassword: updatedPassword }),
+  });
+  if (!passwordUpdated.session) {
+    throw new Error('Password update failed');
+  }
+
+  const relogin = await request('/api/auth/passport/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: authUser, password: updatedPassword }),
+  });
+  if (!relogin.session) throw new Error('Passport login with new password failed');
 
   const adminLogin = await request('/api/auth/passport/login', {
     method: 'POST',

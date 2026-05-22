@@ -168,8 +168,18 @@ function initializeDatabase() {
 // Инициализируем БД при загрузке модуля
 initializeDatabase();
 
+function checkDatabaseHealth() {
+  try {
+    db.prepare('SELECT 1 as ok').get();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 module.exports = {
   db,
   DB_PATH,
   DATA_DIR,
+  checkDatabaseHealth,
 };

@@ -198,6 +198,47 @@ function updateUser(userId, patch) {
 }
 
 /**
+ * Обновляет публичные данные профиля пользователя
+ */
+function updateUserProfile(userId, patch = {}) {
+  const safePatch = {
+    displayName: patch.displayName !== undefined ? String(patch.displayName || '').trim().slice(0, 80) : undefined,
+  };
+  return updateUser(userId, safePatch);
+}
+
+/**
+ * Меняет пароль пользователя
+ */
+function changeUserPassword(userId, currentPassword, nextPassword) {
+  const userRecord = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+  if (!userRecord) {
+    const err = new Error('User not found');
+    err.code = 'USER_NOT_FOUND';
+    throw err;
+  }
+
+  if (!verifyPassword(currentPassword, userRecord.password_hash)) {
+    const err = new Error('Текущий пароль указан неверно');
+    err.code = 'INVALID_PASSWORD';
+    throw err;
+  }
+
+  const passwordValidation = validatePasswordStrength(nextPassword);
+  if (!passwordValidation.valid) {
+    const err = new Error(passwordValidation.errors[0]);
+    err.code = 'WEAK_PASSWORD';
+    throw err;
+  }
+
+  const now = new Date().toISOString();
+  db.prepare('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?')
+    .run(hashPassword(nextPassword), now, userId);
+
+  return normalizeUser(db.prepare('SELECT * FROM users WHERE id = ?').get(userId));
+}
+
+/**
  * Удаляет пользователя
  */
 function deleteUser(userId) {
@@ -231,6 +272,8 @@ module.exports = {
   
   createUser,
   updateUser,
+  updateUserProfile,
+  changeUserPassword,
   deleteUser,
   getAllUsers,
   
